@@ -2,7 +2,7 @@
 #include <FastLED.h>
 #include "SolidColorState.h"
 #include "WebServerHandler.h"
-#include <ArduinoJson.h>
+#include "WifiCreds.h"
 
 #define LED_PIN 23
 #define NUM_LEDS 108
@@ -17,7 +17,7 @@ LEDController* ledController;
 WebServerHandler* webServerHandler;
 
 void connectToWifi() {
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Connecting to WiFi...");
 
   int retryCount = 0;
