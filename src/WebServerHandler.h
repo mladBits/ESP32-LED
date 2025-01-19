@@ -5,12 +5,13 @@
 #include "LEDController.h"
 #include "SolidColorState.h"
 #include "PlasmaState.h"
+#include "PaletteManager.h"
 
 class WebServerHandler {
     private:
         AsyncWebServer server;
         LEDController* ledController;
-
+        PaletteManager* pm = new PaletteManager();
     public:
         WebServerHandler(LEDController* controller, int port = 80);
         void begin();

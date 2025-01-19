@@ -13,6 +13,7 @@ class LEDController {
     public:
         LEDController(CRGB* ledArray, int num);
         void setState(LEDState* newState);
+        LEDState* getState();
         void update();
         ~LEDController();
 };

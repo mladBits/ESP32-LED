@@ -10,9 +10,6 @@
 #define COLOR_ORDER GRB
 
 CRGB leds[NUM_LEDS];
-
-
-
 LEDController* ledController;
 WebServerHandler* webServerHandler;
 
@@ -43,12 +40,16 @@ void setup() {
 
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   ledController = new LEDController(leds, NUM_LEDS);
-  ledController->setState(new SolidColorState(CRGB::Black));
+  LEDState *defaultState = new SolidColorState(CRGB::Black);
+  defaultState->setPaletteId(1);
+  defaultState->setStatic(false);
+  ledController->setState(defaultState);
 
   webServerHandler = new WebServerHandler(ledController);
   webServerHandler->begin();
   
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000); 
+  FastLED.setBrightness(200);
 
   FastLED.clear();
   FastLED.show();

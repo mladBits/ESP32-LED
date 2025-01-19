@@ -7,9 +7,9 @@ class PlasmaState : public LEDState {
     private:
         CRGBPalette16 currentPalette;
         CRGBPalette16 targetPalette;
-
     public:
-        PlasmaState(CRGBPalette16 c);
+        PlasmaState(CRGBPalette16 c, bool isStatic);
+        void setPalette(CRGBPalette16 c);
         void plasma(CRGB* leds, int numLeds);
         void update(CRGB* leds, int numLeds) override;
 };

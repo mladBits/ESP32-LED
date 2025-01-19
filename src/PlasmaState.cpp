@@ -4,7 +4,9 @@
 #define qsubd(x, b)  ((x>b)?b:0)                              // Digital unsigned subtraction macro. if result <0, then => 0. Otherwise, take on fixed value.
 #define qsuba(x, b)  ((x>b)?x-b:0) 
 
-PlasmaState::PlasmaState(CRGBPalette16 c) : currentPalette(c) {}
+PlasmaState::PlasmaState(CRGBPalette16 c, bool isStatic) : currentPalette(c) {
+  this->setStatic(isStatic);
+}
 
 void PlasmaState::plasma(CRGB* leds, int numLeds) {                                                 // This is the heart of this program. Sure is short. . . and fast.
 
@@ -20,19 +22,25 @@ void PlasmaState::plasma(CRGB* leds, int numLeds) {                             
   }
 }
 
+void PlasmaState::setPalette(CRGBPalette16 c) {
+  currentPalette = c;
+}
+
 void PlasmaState::update(CRGB* leds, int numLeds) {
     EVERY_N_MILLISECONDS(50) {                                  // FastLED based non-blocking delay to update/display the sequence.
         plasma(leds, numLeds);
     }
 
-    EVERY_N_MILLISECONDS(100) {
-        uint8_t maxChanges = 24; 
-        nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);   // AWESOME palette blending capability.
-    }
+    if (!isPaletteStatic) {
+      EVERY_N_MILLISECONDS(100) {
+          uint8_t maxChanges = 24; 
+          nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);   // AWESOME palette blending capability.
+      }
 
-    EVERY_N_SECONDS(5) {                                 // Change the target palette to a random one every 5 seconds.
-        uint8_t baseC = random8();                         // You can use this as a baseline colour if you want similar hues in the next line.
-        targetPalette = CRGBPalette16(CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)), CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)));
+      EVERY_N_SECONDS(5) {                                 // Change the target palette to a random one every 5 seconds.
+          uint8_t baseC = random8();                         // You can use this as a baseline colour if you want similar hues in the next line.
+          targetPalette = CRGBPalette16(CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)), CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)));
+      }
     }
 
     FastLED.show();

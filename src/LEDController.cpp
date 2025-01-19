@@ -9,6 +9,10 @@ void LEDController::setState(LEDState* newState) {
     currentState = newState;
 }
 
+LEDState* LEDController::getState() {
+    return currentState;
+}
+
 void LEDController::update() {
     if (currentState) {
         currentState->update(leds, numLeds);

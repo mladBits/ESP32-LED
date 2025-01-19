@@ -33,16 +33,21 @@ void WebServerHandler::begin() {
     });
 
     server.on("/set-animation", HTTP_POST, [this](AsyncWebServerRequest* request) {
-        if (request->hasParam("type", false)) {
-            String type = request->getParam("type", false)->value();
-
-            if (type == "1") {
-                ledController->setState(new PlasmaState(OceanColors_p));
-                request->send(200, "application/json", "{\"success\": true, \"message\": \"plasma animation set!\"}");
-            } else {
-                request->send(400, "application/json", "{\"success\": false, \"message\": \"invalid animation type!\"}");
-            }
+        if (request->hasParam("static", false)) {
+            bool isStatic = request->getParam("static", false)->value().equalsIgnoreCase("true");
+            ledController->getState()->setStatic(isStatic);
         }
+
+        if (request->hasParam("paletteId", false)) {
+            int paletteId = request->getParam("paletteId", false)->value().toInt();
+            ledController->getState()->setPaletteId(paletteId);
+        }
+        ledController->setState(
+            new PlasmaState(
+                pm->getPaletteById(ledController->getState()->getPaletteId()), 
+                ledController->getState()->getStatic()));
+
+        request->send(200, "application/json", "{\"success\": true, \"message\": \"animation set!\"}");
     });
 
     server.on("/power", HTTP_POST, [this](AsyncWebServerRequest* request) {
@@ -51,8 +56,6 @@ void WebServerHandler::begin() {
         if (request->hasParam("action", false)) {
             action = request->getParam("action", false)->value();
         }
-
-        Serial.println("Recieved action: " + action);
 
         if (action == "on") {
             fadeIn(2000);
