@@ -12,6 +12,7 @@ class PaletteManager {
     public:
         PaletteManager();
         const CRGBPalette16 getPaletteById(int paletteId) const;
+        const String getPaletteNamesInJson() const;
 };
 
 #endif
