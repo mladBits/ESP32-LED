@@ -1,4 +1,5 @@
 #include "WebServerHandler.h"
+#include "LEDStateFactory.h"
 
 WebServerHandler::WebServerHandler(LEDController* controller, int port)
     : server(port), ledController(controller) {}
@@ -26,6 +27,8 @@ void WebServerHandler::begin() {
             int g = request->getParam("g", false)->value().toInt();
             int b = request->getParam("b", false)->value().toInt();
             ledController->setState(new SolidColorState(CRGB(r, g, b)));
+
+            isOn = true;
             request->send(200, "application/json", "{\"success\": true, \"message\": \"color set!\"}");
         } else {
             request->send(400, "application/json", "{\"success\": false, \"message\": \"missing color parameters!\"}");
@@ -33,38 +36,47 @@ void WebServerHandler::begin() {
     });
 
     server.on("/set-animation", HTTP_POST, [this](AsyncWebServerRequest* request) {
+        LEDState* currentState = ledController->getState();
         if (request->hasParam("static", false)) {
             bool isStatic = request->getParam("static", false)->value().equalsIgnoreCase("true");
-            ledController->getState()->setStatic(isStatic);
+            currentState->setStatic(isStatic);
         }
 
         if (request->hasParam("paletteId", false)) {
             int paletteId = request->getParam("paletteId", false)->value().toInt();
-            ledController->getState()->setPaletteId(paletteId);
+            currentState->setPaletteId(paletteId);
         }
-        ledController->setState(
-            new PlasmaState(
-                pm->getPaletteById(ledController->getState()->getPaletteId()), 
-                ledController->getState()->getStatic()));
 
+        LEDState* newState = nullptr;
+        if (request->hasParam("style", false)) {
+            int styleId = request->getParam("style", false)->value().toInt();
+            newState = LEDStateFactory::createState(styleId, currentState, pm);
+        }
+
+        if (newState) {
+            ledController->setState(newState);
+            //delete newState;
+        }
+
+        isOn = true;
         request->send(200, "application/json", "{\"success\": true, \"message\": \"animation set!\"}");
     });
 
-    server.on("/power", HTTP_POST, [this](AsyncWebServerRequest* request) {
-        String action = "";
-
-        if (request->hasParam("action", false)) {
-            action = request->getParam("action", false)->value();
-        }
-
-        if (action == "on") {
+    server.on("/on", HTTP_POST, [this](AsyncWebServerRequest* request) {
+        if (!isOn) {
             fadeIn(2000);
+
+            isOn = true;
             request->send(200, "text/plain", "LEDs on");
-        } else if (action == "off") {
+        }
+    });
+
+    server.on("/off", HTTP_POST, [this](AsyncWebServerRequest* request) {
+        if (isOn) {
             fadeOut(2000);
+
+            isOn = false;
             request->send(200, "text/plain", "LEDs off");
-        } else {
-            request->send(400, "text/plain", "invalid action");
         }
     });
 

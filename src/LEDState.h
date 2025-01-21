@@ -5,8 +5,8 @@
 
 class LEDState {
     protected:
-        bool isPaletteStatic;
-        int paletteId;
+        bool isPaletteStatic = false;
+        int paletteId = 1;
     public:
         virtual void update(CRGB* leds, int numLeds) = 0;
         virtual void setStatic(bool isStatic) {
