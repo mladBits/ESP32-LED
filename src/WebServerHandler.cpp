@@ -68,5 +68,10 @@ void WebServerHandler::begin() {
         }
     });
 
+    server.on("/palettes", HTTP_GET, [this](AsyncWebServerRequest* request) {
+        PaletteManager pm;
+        request->send(200, "application/json", pm.getPaletteNamesInJson());
+    });
+
     server.begin();
 }

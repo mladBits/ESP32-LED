@@ -20,3 +20,20 @@ const CRGBPalette16 PaletteManager::getPaletteById(int paletteId) const {
     
     return OceanColors_p; //default, but we should handle this properly.
 }
+
+const String PaletteManager::getPaletteNamesInJson() const {
+    String jsonResult = "[";
+    bool isFirst = true;
+
+    for (const auto& entry: paletteMap) {
+        if (!isFirst) {
+            jsonResult += ",";
+        }
+        isFirst = false;
+
+        jsonResult += "\"" + String(entry.second.first.c_str()) + "\"";
+    }
+
+    jsonResult += "]";
+    return jsonResult;
+}
