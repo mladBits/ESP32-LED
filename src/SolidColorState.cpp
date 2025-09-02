@@ -1,12 +1,8 @@
 #include "SolidColorState.h"
 
-SolidColorState::SolidColorState(CRGB c) : color(c) {}
+SolidColorState::SolidColorState() {}
 
-void SolidColorState::setColor(CRGB c) {
-    color = c;
-}
-
-void SolidColorState::update(CRGB* leds, int numLeds) {
+void SolidColorState::update(CRGB* leds, int numLeds, CHSV color) {
     fill_solid(leds, numLeds,  color);
     FastLED.show();
 }

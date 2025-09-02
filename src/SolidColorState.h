@@ -3,14 +3,10 @@
 
 #include "LEDState.h"
 
-class SolidColorState : public LEDState {
-    private:
-        CRGB color;
-
+class SolidColorState {
     public:
-        SolidColorState(CRGB c);
-        void setColor(CRGB c);
-        void update(CRGB* leds, int numLeds) override;
+        SolidColorState();
+        void update(CRGB* leds, int numLeds, CHSV c);
 };
 
 #endif
