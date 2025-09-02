@@ -3,18 +3,30 @@
 
 #include <FastLED.h>
 #include "LEDState.h"
+#include "SolidColorState.h"
 
 class LEDController {
     private:
+        struct Strip {
+            CRGB* leds;
+            int numLeds;
+        };
+
+        static constexpr int MAX_STRIPS = 8;
+        Strip strips[MAX_STRIPS];
+        int numStrips = 0;
+
         LEDState* currentState = nullptr;
-        CRGB* leds;
-        int numLeds;
+        SolidColorState* colorState;
+        bool isAnimated;
 
     public:
-        LEDController(CRGB* ledArray, int num);
+        LEDController();
+        void addStrip(CRGB* ledsArray, int count);
         void setState(LEDState* newState);
+        bool isAnimationActive();
         LEDState* getState();
-        void update();
+        void update(uint8_t  h, uint8_t  s, uint8_t v);
         ~LEDController();
 };
 
