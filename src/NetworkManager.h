@@ -1,10 +1,12 @@
 #pragma once
+
 #include <WiFi.h>
 #include "config/WifiCreds.h"
 
 class NetworkManager {
 public:
     static void connect() {
+        WiFi.mode(WIFI_STA);
         WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         Serial.println("Connecting to WiFi...");
 

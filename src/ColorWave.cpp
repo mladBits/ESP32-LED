@@ -24,7 +24,11 @@ uint8_t gCurrentPaletteNumber = 0;
 CRGBPalette16 gCurrentPalette( CRGB::Black);
 CRGBPalette16 gTargetPalette( gGradientPalettes[0] );
 
-ColorWaveState::ColorWaveState() {}
+ColorWave::ColorWave() {}
+
+const char* ColorWave::getName() const {
+  return "Color Wave";
+}
 
 // This function draws color waves with an ever-changing,
 // widely-varying set of parameters, using a color palette.
@@ -79,7 +83,7 @@ void colorwaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette)
   }
 }
 
-void ColorWaveState::update(CRGB* leds, int numLeds) {
+void ColorWave::update(CRGB* leds, int numLeds) {
   EVERY_N_SECONDS(10) {
     gCurrentPaletteNumber = addmod8( gCurrentPaletteNumber, 1, gGradientPaletteCount);
     gTargetPalette = gGradientPalettes[ gCurrentPaletteNumber ];
@@ -91,8 +95,8 @@ void ColorWaveState::update(CRGB* leds, int numLeds) {
 
   colorwaves(leds, numLeds, gCurrentPalette);
 
-  FastLED.show();
-  FastLED.delay(20);
+  //FastLED.show();
+  //FastLED.delay(20);
 }
 
 // Gradient Color Palette definitions for 33 different cpt-city color palettes.

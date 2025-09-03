@@ -22,16 +22,21 @@ void PlasmaState::plasma(CRGB* leds, int numLeds) {                             
   }
 }
 
+
+const char* PlasmaState::getName() const {
+  return "Plasma";
+}
+
 void PlasmaState::setPalette(CRGBPalette16 c) {
   currentPalette = c;
 }
 
 void PlasmaState::update(CRGB* leds, int numLeds) {
-    EVERY_N_MILLISECONDS(50) {                                  // FastLED based non-blocking delay to update/display the sequence.
+    //EVERY_N_MILLISECONDS(50) {                                  // FastLED based non-blocking delay to update/display the sequence.
         plasma(leds, numLeds);
-    }
+    //}
 
-    if (!isPaletteStatic) {
+    if (!this->getStatic()) {
       EVERY_N_MILLISECONDS(100) {
           uint8_t maxChanges = 24; 
           nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);   // AWESOME palette blending capability.
@@ -42,6 +47,4 @@ void PlasmaState::update(CRGB* leds, int numLeds) {
           targetPalette = CRGBPalette16(CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)), CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)));
       }
     }
-
-    FastLED.show();
 }
