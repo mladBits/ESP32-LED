@@ -4,8 +4,8 @@
 #include <Wifi.h>
 #include <PubSubClient.h>
 #include <FastLED.h>
-#include "SolidColorState.h"
 #include "LEDController.h"
+#include "config/Mqtt.h"
 
 class MqttLight {
     public:
@@ -18,17 +18,12 @@ class MqttLight {
         PubSubClient& client;
         const char* mqttUser;
         const char* mqttPass;
-
-        const char* stateTopic          = "homeassistant/light/esp32_peg_led/state";
-        const char* commandTopic        = "homeassistant/light/esp32_peg_led/set";
-        const char* lightConfigTopic    = "homeassistant/light/esp32_peg_led/config";
-
+ 
         LEDController* ledController;
 
         void callback(char* topic, byte* payload, unsigned int length);
         void reconnect();
         void publishState();
-
 };
 
 #endif

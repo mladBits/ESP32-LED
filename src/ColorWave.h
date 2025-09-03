@@ -1,17 +1,14 @@
-#ifndef COLOR_WAVE_H
-#define COLOR_WAVE_H
+#pragma once
 
-#include "LEDState.h"
+#include "Animation.h"
 
-class ColorWaveState : public LEDState {
+class ColorWave : public Animation {
     private:
         CRGBPalette16 currentPalette;
         CRGBPalette16 targetPalette;
     public:
-        ColorWaveState();
+        ColorWave();
         void setPalette(CRGBPalette16 c);
-        void plasma(CRGB* leds, int numLeds);
         void update(CRGB* leds, int numLeds) override;
+        const char* getName() const override;
 };
-
-#endif
