@@ -15,5 +15,4 @@ class Animation {
         bool getStatic() {
             return isPaletteStatic;
         }
-
 };

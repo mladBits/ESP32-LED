@@ -2,7 +2,7 @@
 #define LED_CONTROLLER_H
 
 #include <FastLED.h>
-#include "Animation.h"
+#include "animation/Animation.h"
 
 class LEDController {
     private:
@@ -15,7 +15,6 @@ class LEDController {
         Strip strips[MAX_STRIPS];
         int numStrips = 0;
         bool isAnimated;
-
     public:
         LEDController();
         void addStrip(CRGB* ledsArray, int count);

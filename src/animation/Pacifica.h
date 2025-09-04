@@ -2,13 +2,15 @@
 
 #include "Animation.h"
 
-class ColorWave : public Animation {
+class Pacifica : public Animation {
     private:
         CRGBPalette16 currentPalette;
         CRGBPalette16 targetPalette;
     public:
-        ColorWave();
+        Pacifica();
         void setPalette(CRGBPalette16 c);
         void update(CRGB* leds, int numLeds) override;
-        const char* getName() const override;
+        const char* getName() const override {
+            return "Pacifica";
+        }
 };

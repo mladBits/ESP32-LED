@@ -1,4 +1,5 @@
 #include "PlasmaState.h"
+#include "Pacifica.h"
 
 // Use qsuba for smooth pixel colouring and qsubd for non-smooth pixel colouring
 #define qsubd(x, b)  ((x>b)?b:0)                              // Digital unsigned subtraction macro. if result <0, then => 0. Otherwise, take on fixed value.
@@ -22,14 +23,6 @@ void PlasmaState::plasma(CRGB* leds, int numLeds) {                             
   }
 }
 
-
-const char* PlasmaState::getName() const {
-  return "Plasma";
-}
-
-void PlasmaState::setPalette(CRGBPalette16 c) {
-  currentPalette = c;
-}
 
 void PlasmaState::update(CRGB* leds, int numLeds) {
     //EVERY_N_MILLISECONDS(50) {                                  // FastLED based non-blocking delay to update/display the sequence.

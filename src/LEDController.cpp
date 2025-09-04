@@ -19,9 +19,11 @@ void LEDController::isAnimationActive(bool toggle) {
 }
 
 void LEDController::apply_hsv(uint8_t  h, uint8_t  s, uint8_t v) {
-    CRGB color = CHSV(h, s, v);
+    CHSV target(h, s, v);
+
     for (int i = 0; i < numStrips; i++) {
-        fill_solid(strips[i].leds, strips[i].numLeds,  color);
+        //nblend(strips[i].hsv, target, 12);
+        fill_solid(strips[i].leds, strips[i].numLeds, target);
     }
     FastLED.show();
 }
