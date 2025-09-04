@@ -5,7 +5,7 @@
 #include "NetworkManager.h"
 #include "config/Mqtt.h"
 
-#define ADD_LEDS(pin, count, array) FastLED.addLeds<WS2812B, pin, GRB>(array, count)
+#define ADD_LEDS(pin, count, array) FastLED.addLeds<WS2812B, pin, GRB>(array, count).setCorrection(TypicalLEDStrip);
 
 #if defined(DEVICE_ID_ESP32_PEG)
 CRGB leds0[NUM_LEDS_0];
@@ -50,9 +50,11 @@ void setup() {
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000); 
   FastLED.setBrightness(150);
   
-  mqttLight.setController(ledController);
+
   mqttClient.setBufferSize(1024);
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+
+  mqttLight.setController(ledController);
   mqttLight.begin();
   
   FastLED.clear();

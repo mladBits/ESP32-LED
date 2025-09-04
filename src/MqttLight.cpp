@@ -1,10 +1,4 @@
 #include "MqttLight.h"
-#include <Arduino.h>
-#include <ArduinoJson.h>
-#include "Animation.h"
-#include "PlasmaState.h"
-#include "PaletteManager.h"
-#include "ColorWave.h"
 
 
 int brightness = 0;
@@ -15,38 +9,25 @@ uint8_t sat = 255;
 uint8_t prevHue = -1;
 uint8_t prevSat = -1;
 uint8_t prevBrightness = -1;
-PaletteManager *pm = new PaletteManager();
-
-Animation* animations[] = {
-    new PlasmaState(pm->getPaletteById(1), false),
-    new ColorWave()
-};
-constexpr int numAnimations = sizeof(animations);
-Animation *currentAnimation = nullptr;
-
-void setEffect(const char* effectName) {
-    for (int i = 0; i < numAnimations; i++) {
-        if (strcmp(animations[i]->getName(), effectName) == 0) {
-            currentAnimation = animations[i];
-            break;
-        }
-    }
-}
 
 namespace {
     char stateTopic[64];
     char commandTopic[64];
     char lightConfigTopic[64];
+    char paletteCommandTopic[64];
+    char paletteStateTopic[64];
 }
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
-    : client(clientRef), mqttUser(user), mqttPass(pass) {
+: client(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
 }
 
 void MqttLight::begin() {
     snprintf(stateTopic, sizeof(stateTopic), "%s/state", LIGHT_CONFIG_TOPIC);
     snprintf(commandTopic, sizeof(commandTopic), "%s/set", LIGHT_CONFIG_TOPIC);
     snprintf(lightConfigTopic, sizeof(lightConfigTopic), "%s/config", LIGHT_CONFIG_TOPIC);
+    //snprintf(paletteCommandTopic, sizeof(paletteCommandTopic), "%s/palette/set", LIGHT_CONFIG_TOPIC);
+    //snprintf(paletteStateTopic, sizeof(paletteStateTopic), "%s/palette/state", LIGHT_CONFIG_TOPIC);
 
     client.setCallback([this](char* topic, byte* payload, unsigned int length) {
         this->callback(topic, payload, length);
@@ -78,37 +59,49 @@ void MqttLight::setController(LEDController* controller) {
     ledController = controller;
 }
 
-void MqttLight::reconnect() {
-    static char configPayload[512];
-    snprintf(configPayload, sizeof(configPayload),
-        "{"
-        "\"~\": \"%s\","
-        "\"name\": \"%s\","
-        "\"unique_id\": \"%s\","
-        "\"schema\": \"json\","
-        "\"stat_t\": \"~/state\","
-        "\"cmd_t\": \"~/set\","
-        "\"brightness\": true,"
-        "\"bri_scl\": 255,"
-        "\"clrm\": true,"
-        "\"sup_clrm\": [\"hs\"],"
-        "\"effect\": true,"
-        "\"effect_list\": [\"Plasma\", \"Color Wave\"]"
-        "}",
-        LIGHT_CONFIG_TOPIC,
-        MQTT_NAME,
-        MQTT_UNIQUE_ID
-    );
+void MqttLight::publishDeviceConfig() {
+    JsonDocument doc;
+    doc["~"]            = LIGHT_CONFIG_TOPIC;
+    doc["name"]         = MQTT_NAME;
+    doc["unique_id"]    = MQTT_UNIQUE_ID;
+    doc["schema"]       = "json";
+    doc["stat_t"]       = "~/state";
+    doc["cmd_t"]        = "~/set";
+    doc["brightness"]   = true;
+    doc["bri_scl"]      = 255;
+    doc["clrm"]         = true;
+    doc["effect"]       = true;
 
+    JsonArray supportedColors = doc["sup_clrm"].to<JsonArray>();
+    supportedColors.add("hs");
+
+    JsonArray effectList = doc["effect_list"].to<JsonArray>();
+    Animation* const* animations = ar.list();
+    for (uint8_t i = 0; i < ar.getSize(); i++) {
+       effectList.add(animations[i]->getName());
+    }
+    
+    char buffer[512];
+    unsigned int n = serializeJson(doc, buffer, sizeof(buffer));
+    client.publish(lightConfigTopic, buffer, true);
+}
+
+void MqttLight::reconnect() {
     unsigned long start = millis();
     while (!client.connected()) {
         if (client.connect(MQTT_CLIENT_ID, mqttUser, mqttPass)) {
             Serial.println("Connected to MQTT Broker");
 
-            client.publish(lightConfigTopic, configPayload, true);
+            publishDeviceConfig();
+
             Serial.print("Subscribing to ");
             Serial.println(commandTopic);
             client.subscribe(commandTopic);
+
+           // Serial.print("Subscribing to ");
+           // Serial.println(paletteCommandTopic);
+            //client.subscribe(paletteCommandTopic);
+
         } else {
             Serial.printf("MQTT connect failed, rc=%d. Retrying...\n", client.state());
             if (millis() - start > 30000) { // stop retrying after 30s
@@ -121,7 +114,7 @@ void MqttLight::reconnect() {
 }
 
 void logTopicAndPayload(char *topic, byte* payload, unsigned int length) {
-    char buf[256];
+    char buf[64];
     Serial.print("Topic: ");
     Serial.print(topic);
     if (length < sizeof(buf)) {
@@ -143,7 +136,6 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
         return;
     }
 
-    char buf[64];
     if (doc["state"].is<const char*>()) {
         const char* stateStr = doc["state"];
         isOn = (stateStr && strncmp(stateStr, "ON", 2) == 0);        
@@ -175,7 +167,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
 
     if (doc["effect"].is<const char*>()) {
         const char* effect = doc["effect"];
-        setEffect(effect);
+        currentAnimation = ar.getByName(effect);
         ledController->isAnimationActive(true);
     }
 
