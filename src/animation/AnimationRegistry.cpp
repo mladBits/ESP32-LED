@@ -1,7 +1,7 @@
 #include "AnimationRegistry.h"
 
 AnimationRegistry::AnimationRegistry(PaletteManager& pm) :
-plasma(pm.getPaletteById(1), false),
+plasma(),
 colorWave(),
 pacifica(),
 count(0) {
@@ -16,6 +16,13 @@ Animation* AnimationRegistry::getByName(const char* name) {
             return animations[i];
         }
     }
+    return nullptr;
+}
+
+Animation* AnimationRegistry::createByName(const char* name) {
+    if (strcmp(name, "Plasma") == 0) return new PlasmaState();
+    if (strcmp(name, "ColorWave") == 0) return new ColorWave();
+    if (strcmp(name, "Pacifica") == 0) return new Pacifica();
     return nullptr;
 }
 

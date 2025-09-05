@@ -4,13 +4,10 @@
 
 class PlasmaState : public Animation {
     private:
-        CRGBPalette16 currentPalette;
-        CRGBPalette16 targetPalette;
-        void plasma(CRGB* leds, int numLeds);
+        void plasma(Strip* strip);
     public:
-        PlasmaState(CRGBPalette16 c, bool isStatic);
-        void setPalette(CRGBPalette16 c);
-        void update(CRGB* leds, int numLeds) override;
+        PlasmaState();
+        void update(Strip* strip) override;
         const char* getName() const override {
             return "Plasma";
         }
