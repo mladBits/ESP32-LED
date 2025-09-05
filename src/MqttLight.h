@@ -37,5 +37,5 @@ class MqttLight {
         void reconnect();
         void publishState();
         void publishDeviceConfig();
-        void publishPaletteConfig();
+        void publishPaletteList();
 };

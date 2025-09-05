@@ -4,12 +4,15 @@
 
 class ColorWave : public Animation {
     private:
-        CRGBPalette16 currentPalette;
-        CRGBPalette16 targetPalette;
+        uint16_t sPseudotime = 0;
+        uint16_t sLastMillis = 0;
+        uint16_t sHue16 = 0;
+        uint32_t lastBlend = 0;
+        void colorwaves(Strip* strip);
+        void colorwavesCenter(Strip* strip);
     public:
         ColorWave();
-        void setPalette(CRGBPalette16 c);
-        void update(CRGB* leds, int numLeds) override;
+        void update(Strip* strip) override;
         const char* getName() const override {
             return "ColorWave";
         }

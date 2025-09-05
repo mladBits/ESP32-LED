@@ -12,6 +12,7 @@ public:
     uint8_t getSize();
     Animation* const* list() const;
     Animation* getByName(const char* name);
+    Animation* createByName(const char* name);
 private:
     size_t count;
     static constexpr uint8_t capacity = 3;

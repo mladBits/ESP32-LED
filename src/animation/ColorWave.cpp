@@ -20,19 +20,15 @@ extern const uint8_t gGradientPaletteCount;
 
 // Current palette number from the 'playlist' of color palettes
 uint8_t gCurrentPaletteNumber = 0;
-
-CRGBPalette16 gCurrentPalette( CRGB::Black);
-CRGBPalette16 gTargetPalette( gGradientPalettes[0] );
-
-ColorWave::ColorWave() {}
+ColorWave::ColorWave() : Animation() {}
 
 // This function draws color waves with an ever-changing,
 // widely-varying set of parameters, using a color palette.
-void colorwaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette) 
+void ColorWave::colorwaves(Strip* strip) 
 {
-  static uint16_t sPseudotime = 0;
-  static uint16_t sLastMillis = 0;
-  static uint16_t sHue16 = 0;
+  sPseudotime = 0;
+  sLastMillis = 0;
+  sHue16      = 0;
  
   uint8_t sat8 = beatsin88( 87, 220, 250);
   uint8_t brightdepth = beatsin88( 341, 96, 224);
@@ -49,7 +45,7 @@ void colorwaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette)
   sHue16 += deltams * beatsin88( 400, 5,9);
   uint16_t brightnesstheta16 = sPseudotime;
   
-  for( uint16_t i = 0 ; i < numleds; i++) {
+  for( uint16_t i = 0 ; i < strip->numLeds; i++) {
     hue16 += hueinc16;
     uint8_t hue8 = hue16 / 256;
     uint16_t h16_128 = hue16 >> 7;
@@ -70,21 +66,17 @@ void colorwaves(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette)
     //index = triwave8( index);
     index = scale8( index, 240);
 
-    CRGB newcolor = ColorFromPalette( palette, index, bri8);
+    CRGB newcolor = ColorFromPalette( strip->currentPalette, index, bri8);
 
     uint16_t pixelnumber = i;
-    pixelnumber = (numleds-1) - pixelnumber;
+    pixelnumber = (strip->numLeds-1) - pixelnumber;
     
-    nblend( ledarray[pixelnumber], newcolor, 128);
+    nblend( strip->leds[pixelnumber], newcolor, 128);
   }
 }
 
-void colorwaves_center(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette) 
+void ColorWave::colorwavesCenter(Strip* strip) 
 {
-  static uint16_t sPseudotime = 0;
-  static uint16_t sLastMillis = 0;
-  static uint16_t sHue16 = 0;
-
   uint8_t sat8 = beatsin88(87, 220, 250);
   uint8_t brightdepth = beatsin88(341, 96, 224);
   uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256));
@@ -100,11 +92,11 @@ void colorwaves_center(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette)
   sHue16 += deltams * beatsin88(400, 5, 9);
   uint16_t brightnesstheta16 = sPseudotime;
 
-  int mid = numleds / 2;
+  int mid = strip->numLeds / 2;
   for (int offset = 0; offset <= mid; offset++) {
     int left  = mid - offset;
     int right = mid + offset;
-    if (left < 0 && right >= numleds) break;
+    if (left < 0 && right >= strip->numLeds) break;
 
     hue16 += hueinc16;
     uint8_t hue8 = hue16 / 256;
@@ -122,27 +114,32 @@ void colorwaves_center(CRGB* ledarray, uint16_t numleds, CRGBPalette16& palette)
     bri8 += (255 - brightdepth);
 
     uint8_t index = scale8(hue8, 240);
-    CRGB newcolor = ColorFromPalette(palette, index, bri8);
+    CRGB newcolor = ColorFromPalette(strip->currentPalette, index, bri8);
 
-    if (left >= 0)  nblend(ledarray[left], newcolor, 128);
-    if (right < numleds) nblend(ledarray[right], newcolor, 128);
+    if (left >= 0)  nblend(strip->leds[left], newcolor, 128);
+    if (right < strip->numLeds) nblend(strip->leds[right], newcolor, 128);
   }
 }
 
-void ColorWave::update(CRGB* leds, int numLeds) {
-  EVERY_N_SECONDS(10) {
-    gCurrentPaletteNumber = addmod8( gCurrentPaletteNumber, 1, gGradientPaletteCount);
-    gTargetPalette = gGradientPalettes[ gCurrentPaletteNumber ];
+void ColorWave::update(Strip* strip) {
+  if (strip->animationGeneratesPalette) {
+    EVERY_N_SECONDS(10) {
+      gCurrentPaletteNumber = addmod8( gCurrentPaletteNumber, 1, gGradientPaletteCount);
+      strip->targetPalette = gGradientPalettes[ gCurrentPaletteNumber ];
+    }
+
+    EVERY_N_MILLISECONDS(40) {
+      nblendPaletteTowardPalette(strip->currentPalette, strip->targetPalette, 16);
+    }
   }
 
-  EVERY_N_MILLISECONDS(40) {
-    nblendPaletteTowardPalette( gCurrentPalette, gTargetPalette, 16);
+  uint32_t now = millis();
+  if (now - lastBlend >= 40) {
+    lastBlend = now;
+    nblendPaletteTowardPalette(strip->currentPalette, strip->targetPalette, 16);
   }
 
-  colorwaves_center(leds, numLeds, gCurrentPalette);
-
-  //FastLED.show();
-  //FastLED.delay(20);
+  colorwavesCenter(strip);
 }
 
 // Gradient Color Palette definitions for 33 different cpt-city color palettes.

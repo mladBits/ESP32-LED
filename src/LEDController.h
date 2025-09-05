@@ -1,27 +1,23 @@
-#ifndef LED_CONTROLLER_H
-#define LED_CONTROLLER_H
+#pragma once
 
 #include <FastLED.h>
 #include "animation/Animation.h"
+#include "animation/AnimationRegistry.h"
+#include "Strip.h"
 
 class LEDController {
     private:
-        struct Strip {
-            CRGB* leds;
-            int numLeds;
-        };
-
-        static constexpr int MAX_STRIPS = 8;
+        static constexpr uint8_t MAX_STRIPS = 8;
         Strip strips[MAX_STRIPS];
-        int numStrips = 0;
+        uint8_t numStrips = 0;
         bool isAnimated;
     public:
         LEDController();
         void addStrip(CRGB* ledsArray, int count);
         bool isAnimationActive();
         void isAnimationActive(bool toggle);
-        void animate(Animation* animation);
-        void apply_hsv(uint8_t  h, uint8_t  s, uint8_t v);
+        void animate();
+        void registerAnimation(AnimationRegistry* ar, const char* name);
+        void applyHsv(uint8_t  h, uint8_t  s, uint8_t v);
+        void updatePalette(CRGBPalette16 palette);
 };
-
-#endif
