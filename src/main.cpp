@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <FastLED.h>
-#include "MqttLight.h"
+#include "mqtt/MqttLight.h"
 #include "LEDController.h"
 #include "NetworkManager.h"
 #include "config/Mqtt.h"
