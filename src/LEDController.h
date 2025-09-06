@@ -20,4 +20,6 @@ class LEDController {
         void registerAnimation(AnimationRegistry* ar, const char* name);
         void applyHsv(uint8_t  h, uint8_t  s, uint8_t v);
         void updatePalette(CRGBPalette16 palette);
+
+        bool isOn = false;
 };

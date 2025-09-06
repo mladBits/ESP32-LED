@@ -3,7 +3,6 @@
 
 int brightness = 0;
 int targetBrightness = 0;
-bool isOn = false;
 uint8_t hue = 32;
 uint8_t sat = 180;
 uint8_t prevHue = -1;
@@ -112,6 +111,9 @@ void MqttLight::reconnect() {
             Serial.print("Subscribing to ");
             Serial.println(paletteSetTopic);
             client.subscribe(paletteSetTopic);
+
+            // publish default state.
+            publishState();
         } else {
             Serial.printf("MQTT connect failed, rc=%d. Retrying...\n", client.state());
             if (millis() - start > 30000) { // stop retrying after 30s
@@ -149,26 +151,16 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (strncmp(topic, commandTopic, sizeof(commandTopic)) == 0) {
+        bool b = doc["brightness"].is<int>();
+
+        // target on/off state.
+        bool isTargetStateOn = false;
         if (doc["state"].is<const char*>()) {
             const char* stateStr = doc["state"];
-            isOn = (stateStr && strncmp(stateStr, "ON", 2) == 0);        
-        }   
-
-        if (isOn) {
-            if (doc["brightness"].is<int>()) {
-                targetBrightness = doc["brightness"];
-            } else {
-                targetBrightness = 150;
-            }
-        } else {
-            ledController->isAnimationActive(false);
-            targetBrightness = 0;
+            isTargetStateOn = (stateStr && strncmp(stateStr, "ON", 2) == 0);    
         }
 
-        if (doc["brightness"].is<int>()) {
-            targetBrightness = doc["brightness"];
-        }
-
+        // if color is adjusted.
         if (doc["color"].is<JsonObject>()) {
             JsonObject color = doc["color"];
             hue = (uint8_t)((color["h"].as<int>() * 255L) / 360L);
@@ -177,10 +169,30 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             currentAnimation = nullptr;
         }
 
+        // if effect is adjusted.
         if (doc["effect"].is<const char*>()) {
             const char* effect = doc["effect"];
             ledController->registerAnimation(&ar, effect);
             ledController->isAnimationActive(true);
+        }
+
+        // if brightness is adjusted.
+        if (b) {
+            targetBrightness = doc["brightness"];
+        }
+
+        // turn off leds from an on state.
+        if (ledController->isOn && !isTargetStateOn) {
+            ledController->isOn = false;
+            ledController->isAnimationActive(false);
+            targetBrightness = 0;
+            // turn on leds from an off state.
+        } else if (!ledController->isOn && isTargetStateOn) {
+            ledController->isOn = true;
+            // default brightness when turning on/off
+            if (!b) {
+                targetBrightness = 150;
+            }
         }
         publishState();
     } else if(strncmp(topic, paletteSetTopic, sizeof(paletteSetTopic)) == 0) {
@@ -199,7 +211,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
 
 void MqttLight::publishState() {
     JsonDocument doc;
-    doc["state"] = isOn ? "ON" : "OFF";
+    doc["state"] = ledController->isOn ? "ON" : "OFF";
     doc["brightness"] = targetBrightness;
 
     JsonObject color = doc["color"].to<JsonObject>();
