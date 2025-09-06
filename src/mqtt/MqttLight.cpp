@@ -1,5 +1,5 @@
 #include "MqttLight.h"
-
+#include "MqttTopics.h"
 
 int brightness = 0;
 int targetBrightness = 0;
@@ -9,26 +9,11 @@ uint8_t prevHue = -1;
 uint8_t prevSat = -1;
 uint8_t prevBrightness = -1;
 
-namespace {
-    char stateTopic[64];
-    char commandTopic[64];
-    char lightConfigTopic[64];
-    char paletteSetTopic[64];
-    char paletteStateTopic[64];
-    char paletteListTopic[64];
-}
-
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
 : client(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
 }
 
 void MqttLight::begin() {
-    snprintf(stateTopic, sizeof(stateTopic), "%s/state", LIGHT_CONFIG_TOPIC);
-    snprintf(commandTopic, sizeof(commandTopic), "%s/set", LIGHT_CONFIG_TOPIC);
-    snprintf(lightConfigTopic, sizeof(lightConfigTopic), "%s/config", LIGHT_CONFIG_TOPIC);
-    snprintf(paletteSetTopic, sizeof(paletteSetTopic), "%s/palette/set1", LIGHT_CONFIG_TOPIC);
-    snprintf(paletteListTopic, sizeof(paletteListTopic), "%s/palette/list", LIGHT_CONFIG_TOPIC);
-
     client.setCallback([this](char* topic, byte* payload, unsigned int length) {
         this->callback(topic, payload, length);
     });
@@ -65,7 +50,7 @@ void MqttLight::publishPaletteList() {
 
     String payload;
     serializeJson(doc, payload);
-    client.publish(paletteListTopic, payload.c_str(), true);
+    client.publish(PALETTE_LIST_TOPIC, payload.c_str(), true);
 }
 
 void MqttLight::publishDeviceConfig() {
@@ -92,7 +77,7 @@ void MqttLight::publishDeviceConfig() {
     
     String payload;
     serializeJson(doc, payload);
-    client.publish(lightConfigTopic, payload.c_str(), true);
+    client.publish(CONFIG_TOPIC, payload.c_str(), true);
 }
 
 void MqttLight::reconnect() {
@@ -105,12 +90,12 @@ void MqttLight::reconnect() {
             publishPaletteList();
 
             Serial.print("Subscribing to ");
-            Serial.println(commandTopic);
-            client.subscribe(commandTopic);
+            Serial.println(SET_TOPIC);
+            client.subscribe(SET_TOPIC);
 
             Serial.print("Subscribing to ");
-            Serial.println(paletteSetTopic);
-            client.subscribe(paletteSetTopic);
+            Serial.println(PALETTE_SET_TOPIC);
+            client.subscribe(PALETTE_SET_TOPIC);
 
             // publish default state.
             publishState();
@@ -150,7 +135,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
         return;
     }
 
-    if (strncmp(topic, commandTopic, sizeof(commandTopic)) == 0) {
+    if (strncmp(topic, SET_TOPIC, sizeof(SET_TOPIC)) == 0) {
         bool b = doc["brightness"].is<int>();
 
         // target on/off state.
@@ -195,7 +180,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             }
         }
         publishState();
-    } else if(strncmp(topic, paletteSetTopic, sizeof(paletteSetTopic)) == 0) {
+    } else if(strncmp(topic, PALETTE_SET_TOPIC, sizeof(PALETTE_SET_TOPIC)) == 0) {
         if (doc["palette"].is<const char*>()) {
             const char* palette = doc["palette"];
             const CRGBPalette16* targetPalette = pm.getPaletteByName(palette);
@@ -220,5 +205,5 @@ void MqttLight::publishState() {
     
     char buffer[128];
     unsigned int n = serializeJson(doc, buffer, sizeof(buffer));
-    client.publish(stateTopic, buffer, true);
+    client.publish(STATE_TOPIC, buffer, true);
 }
