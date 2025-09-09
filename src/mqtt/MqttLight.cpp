@@ -1,5 +1,6 @@
 #include "MqttLight.h"
 #include "MqttTopics.h"
+#include "animation/AnimationDirection.h"
 
 int brightness = 0;
 int targetBrightness = 0;
@@ -139,7 +140,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
         bool b = doc["brightness"].is<int>();
 
         // target on/off state.
-        bool isTargetStateOn = false;
+        bool isTargetStateOn = ledController->isOn;
         if (doc["state"].is<const char*>()) {
             const char* stateStr = doc["state"];
             isTargetStateOn = (stateStr && strncmp(stateStr, "ON", 2) == 0);    
@@ -159,6 +160,12 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             const char* effect = doc["effect"];
             ledController->registerAnimation(&ar, effect);
             ledController->isAnimationActive(true);
+        }
+
+        // if effect direction is adjusted (not supported by home assistant).
+        if (doc["effect_dir"].is<const char*>()) {
+            AnimationDirection direction = AnimationDirectionHelper::parse(doc["effect_dir"]);
+            ledController->updateDirection(direction);
         }
 
         // if brightness is adjusted.

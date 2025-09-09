@@ -48,3 +48,9 @@ void LEDController::updatePalette(CRGBPalette16 palette) {
         strips[i].animationGeneratesPalette = false;
     }
 }
+
+void LEDController::updateDirection(AnimationDirection direction) {
+    for (int i = 0; i < numStrips; i++) {
+        strips[i].animation->setDirection(direction);
+    }
+}

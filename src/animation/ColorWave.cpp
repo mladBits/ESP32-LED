@@ -93,7 +93,17 @@ void ColorWave::colorwavesCenter(Strip* strip)
   uint16_t brightnesstheta16 = sPseudotime;
 
   int mid = strip->numLeds / 2;
-  for (int offset = 0; offset <= mid; offset++) {
+  int startingOffset;
+  int step;
+  if (direction == Outward) {
+    startingOffset = mid;
+    step = -1;
+  } else {
+    startingOffset = 0;
+    step = 1;
+  }
+
+  for (int offset = startingOffset; (step > 0) ? offset <= mid : offset >= 0; offset+=step) {
     int left  = mid - offset;
     int right = mid + offset;
     if (left < 0 && right >= strip->numLeds) break;
