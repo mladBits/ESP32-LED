@@ -3,6 +3,7 @@
 #include <FastLED.h>
 #include "animation/Animation.h"
 #include "animation/AnimationRegistry.h"
+#include "animation/AnimationDirection.h"
 #include "Strip.h"
 
 class LEDController {
@@ -20,6 +21,6 @@ class LEDController {
         void registerAnimation(AnimationRegistry* ar, const char* name);
         void applyHsv(uint8_t  h, uint8_t  s, uint8_t v);
         void updatePalette(CRGBPalette16 palette);
-
+        void updateDirection(AnimationDirection direction);
         bool isOn = false;
 };
