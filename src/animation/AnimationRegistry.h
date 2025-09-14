@@ -15,7 +15,7 @@ public:
     Animation* createByName(const char* name);
 private:
     size_t count;
-    static constexpr uint8_t capacity = 3;
+    static constexpr uint8_t capacity = 5;
     Animation* animations[capacity];
 
     PlasmaState plasma;
