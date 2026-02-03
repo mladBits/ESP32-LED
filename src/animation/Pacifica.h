@@ -5,7 +5,7 @@
 class Pacifica : public Animation {
     public:
         Pacifica();
-        void update(Strip* strip) override;
+        void update(Strip& strip) const override;
         const char* getName() const override {
             return "Pacifica";
         }

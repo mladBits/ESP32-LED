@@ -48,7 +48,7 @@ void setup() {
   #endif
 
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000); 
-  FastLED.setBrightness(150);
+  FastLED.setBrightness(75);
   
 
   mqttClient.setBufferSize(1024);

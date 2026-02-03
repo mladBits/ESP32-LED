@@ -9,10 +9,11 @@
 class AnimationRegistry {
 public:
     explicit AnimationRegistry(PaletteManager& pm);
-    uint8_t getSize();
-    Animation* const* list() const;
-    Animation* getByName(const char* name);
-    Animation* createByName(const char* name);
+
+    uint8_t getSize() const;
+    const Animation* const* list() const;
+
+    Animation* getByName(const char* name) const;
 private:
     size_t count;
     static constexpr uint8_t capacity = 5;

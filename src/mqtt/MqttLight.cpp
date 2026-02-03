@@ -2,14 +2,6 @@
 #include "MqttTopics.h"
 #include "animation/AnimationDirection.h"
 
-int brightness = 0;
-int targetBrightness = 0;
-uint8_t hue = 32;
-uint8_t sat = 180;
-uint8_t prevHue = -1;
-uint8_t prevSat = -1;
-uint8_t prevBrightness = -1;
-
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
 : client(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
 }
@@ -20,25 +12,77 @@ void MqttLight::begin() {
     });
 }
 
+static uint8_t lerpHueShortest(uint8_t a, uint8_t b, uint8_t t /*0..255*/) {
+    int16_t diff = (int16_t)b - (int16_t)a;
+
+    // wrap to shortest path on the 0..255 hue circle
+    if (diff > 127) diff -= 256;
+    if (diff < -128) diff += 256;
+
+    // linear interpolation along that shortest diff
+    return (uint8_t)(a + ((diff * (int16_t)t) >> 8));
+}
+
 void MqttLight::loop() {
-    if (!client.connected()) {
-        reconnect();
-    }
+    if (!client.connected()) reconnect(); 
     client.loop();
  
     if (brightness < targetBrightness) brightness++;
     else if (brightness > targetBrightness) brightness--;
-        
-    if (!ledController->isAnimationActive()) {
-        if (brightness != prevBrightness || hue != prevHue || sat != prevSat) {
-            ledController->applyHsv(hue, sat, brightness);
-            prevHue = hue;
-            prevSat = sat;
+    
+    const bool effectiveOn = powerRequestedOn && (brightness > 0);
+
+    //if fully off; stop doing work
+    if (!effectiveOn) {
+        if (brightness == 0 && prevBrightness != 0) {
+            ledController->setBrightness(0);
+            ledController->clear();
+            ledController->show();
+            prevBrightness = 0;
+            prevHue = 0xFF;
+            prevSat = 0xFF;
+        }
+        return;
+    }
+
+    ledController->setBrightness(brightness);
+
+    if (effectWanted == EffectMode::ANIMATION && wantedAnimation) {
+        ledController->animate();
+
+        // optional: don't let solid-mode cache block future solid updates
+        prevHue = 0xFF;
+        prevSat = 0xFF;
+    } else {
+        const uint32_t now = millis();
+        if (solidColorBlending) {
+            uint32_t elapsed = now - solidBlendStartMs;
+
+            uint8_t t;
+            if (elapsed >= solidBlendDurationMs) {
+                t = 255;
+                solidColorBlending = false;
+            } else {
+                t = (uint8_t)((elapsed * 255UL) / solidBlendDurationMs);
+            }
+
+            solidHueCur = lerpHueShortest(solidHueFrom, solidHueTo, t);
+            solidSatCur = lerp8by8(solidSatFrom, solidSatTo, t);
+        } else {
+            solidHueCur = solidHueTo;
+            solidSatCur = solidSatTo;
+        }
+
+        // render blended color; do NOT pass brightness as V (brightness handled by setBrightness)
+        if (brightness != prevBrightness || solidHueCur != prevHue || solidSatCur != prevSat) {
+            ledController->applyHsv(solidHueCur, solidSatCur, 255);
+            prevHue = solidHueCur;
+            prevSat = solidSatCur;
             prevBrightness = brightness;
         }
-    } else {
-        ledController->animate();
     }
+
+    ledController->show();
 }
 
 void MqttLight::setController(LEDController* controller) {
@@ -71,7 +115,7 @@ void MqttLight::publishDeviceConfig() {
     supportedColors.add("hs");
 
     JsonArray effectList = doc["effect_list"].to<JsonArray>();
-    Animation* const* animations = ar.list();
+    const Animation* const* animations = ar.list();
     for (uint8_t i = 0; i < ar.getSize(); i++) {
        effectList.add(animations[i]->getName());
     }
@@ -149,17 +193,40 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
         // if color is adjusted.
         if (doc["color"].is<JsonObject>()) {
             JsonObject color = doc["color"];
-            hue = (uint8_t)((color["h"].as<int>() * 255L) / 360L);
-            sat = (uint8_t)((color["s"].as<int>() * 255L) / 100L);
-            ledController->isAnimationActive(false);
-            currentAnimation = nullptr;
+
+            float hDegF = color["h"].as<float>();
+            float sPctF = color["s"].as<float>();
+
+            int hDeg = (int)lroundf(hDegF);
+            int sPct = (int)lroundf(sPctF);
+
+            hue = haHueDegToFast(hDeg);
+            sat = haSatPctToFast(sPct);
+            
+            effectWanted = EffectMode::SOLID;
+            wantedAnimation = nullptr;
+
+            // start solid color blend from current displayed color to new target
+            solidHueFrom = solidHueCur;
+            solidSatFrom = solidSatCur;
+
+            solidHueTo = hue;
+            solidSatTo = sat;
+
+            solidBlendStartMs = millis();
+            solidColorBlending = true;
         }
 
         // if effect is adjusted.
         if (doc["effect"].is<const char*>()) {
             const char* effect = doc["effect"];
-            ledController->registerAnimation(&ar, effect);
-            ledController->isAnimationActive(true);
+            Animation* anim = ar.getByName(effect);
+            if (anim) {
+                effectWanted = EffectMode::ANIMATION;
+                wantedAnimation = anim;
+
+                ledController->setAnimation(wantedAnimation);
+            }
         }
 
         // if effect direction is adjusted (not supported by home assistant).
@@ -170,20 +237,26 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
 
         // if brightness is adjusted.
         if (b) {
-            targetBrightness = doc["brightness"];
+            int br = doc["brightness"].as<int>();
+            if (br < 0) br = 0;
+            if (br > 255) br = 255;
+            targetBrightness = (uint8_t)br;
+
+            if (targetBrightness > 0) lastOnBrightness = targetBrightness;
         }
 
         // turn off leds from an on state.
         if (ledController->isOn && !isTargetStateOn) {
+            if (targetBrightness > 0) lastOnBrightness = targetBrightness;
+
             ledController->isOn = false;
-            ledController->isAnimationActive(false);
             targetBrightness = 0;
             // turn on leds from an off state.
         } else if (!ledController->isOn && isTargetStateOn) {
             ledController->isOn = true;
             // default brightness when turning on/off
             if (!b) {
-                targetBrightness = 150;
+                targetBrightness = lastOnBrightness;
             }
         }
         publishState();
@@ -207,10 +280,10 @@ void MqttLight::publishState() {
     doc["brightness"] = targetBrightness;
 
     JsonObject color = doc["color"].to<JsonObject>();
-    color["h"] = (hue * 360) / 255;
-    color["s"] = (sat * 100) / 255;
+    color["h"] = fastHueToHaDeg(hue);
+    color["s"] = fastSatToHaPct(sat);
     
     char buffer[128];
-    unsigned int n = serializeJson(doc, buffer, sizeof(buffer));
+    serializeJson(doc, buffer, sizeof(buffer));
     client.publish(STATE_TOPIC, buffer, true);
 }

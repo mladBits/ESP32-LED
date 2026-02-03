@@ -42,9 +42,9 @@ CRGBPalette16 pacifica_palette_3 =
 
 Pacifica::Pacifica() {}
 
-void Pacifica::update(Strip* strip) {
+void Pacifica::update(Strip& strip) const {
   //EVERY_N_MILLISECONDS( 20) {
-    pacifica_loop(strip->leds, strip->numLeds);
+    pacifica_loop(strip.leds, strip.numLeds);
   //}
 }
 

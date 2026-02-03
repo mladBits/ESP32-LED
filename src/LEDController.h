@@ -11,16 +11,29 @@ class LEDController {
         static constexpr uint8_t MAX_STRIPS = 8;
         Strip strips[MAX_STRIPS];
         uint8_t numStrips = 0;
-        bool isAnimated;
+
     public:
-        LEDController();
+        LEDController() = default;
+
         void addStrip(CRGB* ledsArray, int count);
-        bool isAnimationActive();
-        void isAnimationActive(bool toggle);
-        void animate();
-        void registerAnimation(AnimationRegistry* ar, const char* name);
+        
+        void clear();
+        void setBrightness(uint8_t b);
         void applyHsv(uint8_t  h, uint8_t  s, uint8_t v);
-        void updatePalette(CRGBPalette16 palette);
+        void animate();
+        void show();
+        
+        // animation control
+        void setAnimation(const Animation* anim);
+        void registerAnimation(const AnimationRegistry* ar, const char* name);
+        
+        // palette control
+        void updatePalette(const CRGBPalette16& palette, bool immediate = false);
+
+        // direction control
         void updateDirection(AnimationDirection direction);
+
+        uint8_t getNumStrips() const { return numStrips; }
+        
         bool isOn = false;
 };

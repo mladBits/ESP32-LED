@@ -4,10 +4,10 @@
 
 class PlasmaState : public Animation {
     private:
-        void plasma(Strip* strip);
+        void plasma(Strip& strip) const;
     public:
         PlasmaState();
-        void update(Strip* strip) override;
+        void update(Strip& strip) const override;
         const char* getName() const override {
             return "Plasma";
         }

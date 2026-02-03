@@ -4,15 +4,18 @@
 
 class ColorWave : public Animation {
     private:
-        uint16_t sPseudotime = 0;
-        uint16_t sLastMillis = 0;
-        uint16_t sHue16 = 0;
-        uint32_t lastBlend = 0;
-        void colorwaves(Strip* strip);
-        void colorwavesCenter(Strip* strip);
+        mutable uint16_t sPseudotime = 0;
+        mutable uint16_t sLastMillis = 0;
+        mutable uint16_t sHue16 = 0;
+    
+        mutable uint32_t lastFrameMs = 0;
+
+        void colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) const;
+        void colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudotime) const;
     public:
-        ColorWave();
-        void update(Strip* strip) override;
+        ColorWave() = default;
+
+        void update(Strip& strip) const override;
         const char* getName() const override {
             return "ColorWave";
         }

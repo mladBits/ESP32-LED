@@ -1,12 +1,13 @@
 #pragma once
 #include <FastLED.h>
+#include "animation/AnimationDirection.h"
 #include "animation/Animation.h"
 
 class Animation;
 
 struct Strip {
     uint8_t id;
-    CRGB* leds;
+    CRGB* leds = nullptr;
     int numLeds;
 
     CRGBPalette16 currentPalette = RainbowColors_p;
@@ -15,9 +16,12 @@ struct Strip {
     bool usePalette = false;
     bool animationGeneratesPalette = false;
 
-    Animation* animation = nullptr; 
+    AnimationDirection direction = Outward;
+    const Animation* animation = nullptr; 
 
-    Strip() : id(0), leds(nullptr), numLeds(0) {}
+    uint32_t paletteLastBlendMs = 0;
+
+    Strip() = default;
 
     Strip(
         uint8_t _id, 
@@ -26,7 +30,9 @@ struct Strip {
         const CRGBPalette16& _current = RainbowColors_p,
         const CRGBPalette16& _target = RainbowColors_p,
         bool _usePalette = false,
-        bool _animationGeneratesPalette = false)
+        bool _animationGeneratesPalette = false,
+        AnimationDirection _direction = Outward
+    )
     : 
     id(_id), 
     leds(_leds),
