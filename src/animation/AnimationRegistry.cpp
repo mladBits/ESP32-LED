@@ -1,10 +1,13 @@
 #include "AnimationRegistry.h"
 
 AnimationRegistry::AnimationRegistry(PaletteManager& pm) :
-plasma(), colorWave(), pacifica(), count(0) {
+plasma(), colorWave(), pacifica(), cyberPulse(), neonGrid(), emberBloom(), count(0) {
     animations[count++] = &plasma;
     animations[count++] = &colorWave;
     animations[count++] = &pacifica;
+    animations[count++] = &cyberPulse;
+    animations[count++] = &neonGrid;
+    animations[count++] = &emberBloom;
 }
 
 Animation* AnimationRegistry::getByName(const char* name) const {

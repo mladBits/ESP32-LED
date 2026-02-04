@@ -151,9 +151,11 @@ PaletteManager::PaletteManager() {
             CHSV(85, 255, 180),
             CHSV(170, 255, 180),
             CHSV(43, 255, 180)
-        )}
+        )},
+        
     };
 }
+
 
 const CRGBPalette16* PaletteManager::getPaletteByName(const char* name) const {
     auto it = paletteMap.find(std::string(name));
