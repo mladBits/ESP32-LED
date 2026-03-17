@@ -10,6 +10,11 @@
 #define MQTT_UNIQUE_ID  "esp32_led_6"
 #define MQTT_NAME       "ESP32 Desk LED"
 
+#elif defined(DEVICE_ID_ESP32_WALL)
+#define MQTT_CLIENT_ID  "esp32_wall_led"
+#define MQTT_UNIQUE_ID  "esp32_led_7"
+#define MQTT_NAME       "ESP32 Wall LED"
+
 #elif defined(DEVICE_ID_ESP32_TEST)
 #define MQTT_CLIENT_ID  "esp32_test_led"
 #define MQTT_UNIQUE_ID  "esp32_test_led_66"

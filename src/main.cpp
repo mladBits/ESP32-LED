@@ -5,7 +5,13 @@
 #include "NetworkManager.h"
 #include "config/Mqtt.h"
 
-#define ADD_LEDS(pin, count, array) FastLED.addLeds<WS2812B, pin, GRB>(array, count).setCorrection(TypicalLEDStrip);
+#if defined(DEVICE_ID_ESP32_WALL)
+  #define LED_CHIPSET WS2811
+  #define LED_COLOR_ORDER RGB
+#else
+  #define LED_CHIPSET WS2812B
+  #define LED_COLOR_ORDER GRB
+#endif
 
 #if defined(DEVICE_ID_ESP32_PEG)
 CRGB leds0[NUM_LEDS_0];
@@ -13,11 +19,19 @@ CRGB leds1[NUM_LEDS_1];
 CRGB leds2[NUM_LEDS_2];
 #elif defined(DEVICE_ID_ESP32_DESK)
 CRGB leds0[NUM_LEDS_0];
+#elif defined(DEVICE_ID_ESP32_WALL)
+CRGB leds0[NUM_LEDS_0];
 #elif defined(DEVICE_ID_ESP32_TEST)
 CRGB leds0[NUM_LEDS_0];
 #else
 #error "Unknown device environment"
 #endif
+
+template<uint8_t PIN>
+static inline void addStrip(CRGB* leds, int count) {
+  FastLED.addLeds<LED_CHIPSET, PIN, LED_COLOR_ORDER>(leds, count)
+         .setCorrection(TypicalLEDStrip);
+}
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -28,33 +42,33 @@ void setup() {
   delay(2000);
 
   NetworkManager::connect();
+  static LEDController ledController;
 
-  LEDController* ledController = new LEDController();
+#if defined(DEVICE_ID_ESP32_PEG)
+    addStrip<LED_PIN_0>(leds0, NUM_LEDS_0);
+    addStrip<LED_PIN_1>(leds1, NUM_LEDS_1);
+    addStrip<LED_PIN_2>(leds2, NUM_LEDS_2);
 
-  #if defined(DEVICE_ID_ESP32_PEG)
-    ADD_LEDS(LED_PIN_0, NUM_LEDS_0, leds0);
-    ADD_LEDS(LED_PIN_1, NUM_LEDS_1, leds1);
-    ADD_LEDS(LED_PIN_2, NUM_LEDS_2, leds2);
+    ledController.addStrip(leds0, NUM_LEDS_0);
+    ledController.addStrip(leds1, NUM_LEDS_1);
+    ledController.addStrip(leds2, NUM_LEDS_2);
+#elif defined(DEVICE_ID_ESP32_DESK) || defined(DEVICE_ID_ESP32_WALL) || defined(DEVICE_ID_ESP32_TEST)
+    addStrip<LED_PIN_0>(leds0, NUM_LEDS_0);
+    ledController.addStrip(leds0, NUM_LEDS_0);
+#endif
 
-    ledController->addStrip(leds0, NUM_LEDS_0);
-    ledController->addStrip(leds1, NUM_LEDS_1);
-    ledController->addStrip(leds2, NUM_LEDS_2);
-  #elif defined(DEVICE_ID_ESP32_DESK)
-    ADD_LEDS(LED_PIN_0, NUM_LEDS_0, leds0);
-    ledController->addStrip(leds0, NUM_LEDS_0);
-  #elif defined(DEVICE_ID_ESP32_TEST)
-    ADD_LEDS(LED_PIN_0, NUM_LEDS_0, leds0);
-    ledController->addStrip(leds0, NUM_LEDS_0);
-  #endif
+#if defined(DEVICE_ID_ESP32_WALL)
+  FastLED.setMaxPowerInVoltsAndMilliamps(12, 4000);
+#else
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000);
+#endif
 
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000); 
   FastLED.setBrightness(75);
   
-
   mqttClient.setBufferSize(1024);
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
 
-  mqttLight.setController(ledController);
+  mqttLight.setController(&ledController);
   mqttLight.begin();
   
   FastLED.clear();
@@ -66,5 +80,6 @@ void loop() {
     Serial.println("WiFi disconnected, attempting to reconnect...");
     NetworkManager::connect();
   }
+
   mqttLight.loop();
 }
