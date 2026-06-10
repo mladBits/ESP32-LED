@@ -1,31 +1,103 @@
 # ESP32 LED Strip Controller
 
-This project provides a C/C++ implementation of an HTTP REST service that runs on an ESP32 microcontroller to control/manage a set of LED strips. With this service, users can configure LED strips to display solid colors or animations.
+Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects) plus a `select` entity for color palettes — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
 
 ## Features
-- **REST API**: Control LED strips via HTTP POST requests.
-- **Solid Color Mode**: Set LED strips to a single colour of your choice.
-- **Animation Mode**: Set LED strips to an animation. Currently includes one animation with plans to add more.
+- **Home Assistant MQTT discovery** — the device registers itself automatically; no YAML.
+- **Solid color mode** — full hue/saturation control with smooth color blending.
+- **Animations** — multiple built-in effects, selectable from the light's effect dropdown.
+- **Palettes** — a separate dropdown selects the color palette animations use.
+- **Smooth brightness fading** between levels and on/off.
+- **Per-device builds** — one codebase, multiple boards (number of strips, pins, LED counts) selected at compile time.
 
 ## Hardware Requirements
-- **ESP32**: NodeMCU32 or any other ESP32-based board.
-- **LED Strips**: Something that is compatible with ESP32 GPIO (ie WS2812, WS2811, or other addressable LEDs).
-- **Power Supply**: Something with the correct voltage and sufficient current that can power the total number of LEDs.
+- **ESP32** — NodeMCU-32S or any other ESP32-based board.
+- **LED Strips** — addressable LEDs compatible with ESP32 GPIO (WS2812B, WS2811, etc.).
+- **Power Supply** — correct voltage and enough current for the total LED count.
+- **MQTT broker** — e.g. the Mosquitto add-on in Home Assistant.
 
 ## Software Requirements
-- **PlatformIO**: Recommended development environment.
-- **Arduino Core for ESP32**: Required for compiling and uploading code.
+- **PlatformIO** — build/upload toolchain.
+- **Arduino Core for ESP32** — installed automatically by PlatformIO.
 
-## Software Setup
+Library dependencies (declared in `platformio.ini`, fetched automatically): FastLED, ArduinoJson, PubSubClient.
+
+## Setup
+
 1. Clone this repository:
-  `git clone https://github.com/mladBits/ESP32-LED.git`
-2. Open project in PlatformIO.
-3. Configure the project settings if needed (ie WIFI, GPIO pin).
-4. Build and upload code.
+   ```
+   git clone https://github.com/mladBits/ESP32-LED.git
+   ```
+2. Open the project in PlatformIO.
+3. Create the two local config headers (they are gitignored and **required to compile**):
 
-## REST API Endpoints
-todo
+   `src/config/WifiCreds.h`
+   ```cpp
+   #pragma once
+   #define WIFI_SSID     "your-ssid"
+   #define WIFI_PASSWORD "your-password"
+   ```
 
-## Future Enhancements
-todo
+   `src/config/Mqtt.h`
+   ```cpp
+   #pragma once
+   #define MQTT_SERVER   "192.168.1.10"   // broker IP/hostname
+   #define MQTT_PORT     1883
+   #define MQTT_USER     "mqtt-username"
+   #define MQTT_PASSWORD "mqtt-password"
+   ```
+4. Pick the build environment for your board and upload (see below).
 
+Once flashed and connected, the device appears automatically in **Home Assistant → Settings → Devices & Services → MQTT**.
+
+## Build & Upload
+
+There is no default environment — always pass `-e <env>`. Each environment maps to a physical device and sets its pins / LED counts.
+
+```bash
+pio run -e desk_esp32                       # compile
+pio run -e desk_esp32 -t upload             # compile + flash over USB
+pio run -e desk_esp32 -t upload -t monitor  # flash, then open serial monitor (115200 baud)
+```
+
+| Environment   | Strips | Notes                          |
+|---------------|--------|--------------------------------|
+| `desk_esp32`  | 1      | WS2812B                        |
+| `wall_esp32`  | 1      | WS2811                         |
+| `peg_esp32`   | 3      | WS2812B                        |
+| `test_esp32`  | 1      | WS2812B, bench testing         |
+
+To add a board, add an `[env:...]` block in `platformio.ini` (with its `-DDEVICE_ID_ESP32_*`, `LED_PIN_*`, and `NUM_LEDS_*` flags) and a matching branch in `src/config/Config.h`, `src/mqtt/MqttTopics.h`, and `src/main.cpp`.
+
+## Control
+
+All control is via MQTT. In normal use you interact through the Home Assistant UI — the light card for power/brightness/color/effect, and the **Palette** dropdown for the color palette. The topics below are documented for reference and manual testing. The base prefix is `homeassistant/light/<device>` (e.g. `homeassistant/light/esp32_desk_led`).
+
+### Light — `…/set` (JSON)
+Power, brightness, color, and effect, using the Home Assistant JSON light schema:
+```json
+{ "state": "ON", "brightness": 180, "color": { "h": 210, "s": 80 }, "effect": "Pacifica" }
+```
+- `state` — `"ON"` / `"OFF"`
+- `brightness` — `0`–`255`
+- `color` — `h` in degrees (0–360), `s` in percent (0–100)
+- `effect` — one of the effect names below (switches to animation mode)
+- `effect_dir` — `"Outward"` / `"Inward"` (custom extension, not exposed in the HA UI)
+
+Sending a `color` switches back to solid-color mode. Current state is published to `…/state`.
+
+### Palette — `…/palette/set1` (JSON)
+```json
+{ "palette": "OceanColors" }
+```
+Home Assistant's auto-generated **Palette** select sends this for you. The available options are published to `…/palette/list`, and the current selection to `…/palette/state`.
+
+### Built-in effects
+`Plasma`, `ColorWave`, `Pacifica`, `Cyber Pulse`, `Neon Grid Breathing`, `Ember Bloom`
+
+### Palettes
+A range of FastLED built-ins (RainbowColors, OceanColors, LavaColors, …) plus custom palettes (SunsetColors, Cyberpunk, ToxicSlime, NeonStorm, and more). The full, current list is whatever the device publishes to `…/palette/list`.
+
+## Notes
+- Brightness is applied globally via FastLED, not as the color's value channel, so colors stay true across brightness levels.
+- Discovery configs are published retained on every (re)connect. If you change unique IDs or see stale entities, remove the device under the MQTT integration and let it re-announce.
