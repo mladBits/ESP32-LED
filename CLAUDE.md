@@ -18,7 +18,7 @@ pio device monitor -b 115200             # serial monitor only (115200 baud)
 pio run -t clean -e desk_esp32           # clean build artifacts
 ```
 
-Environments (defined in [platformio.ini](platformio.ini)): `peg_esp32` (3 strips), `desk_esp32`, `wall_esp32`, `test_esp32`. Each sets a `-DDEVICE_ID_ESP32_*` macro plus `LED_PIN_*` / `NUM_LEDS_*` build flags. Per-device identity (MQTT client/unique IDs, names) and topic prefixes are resolved at compile time from that macro in [src/config/Config.h](src/config/Config.h) and [src/mqtt/MqttTopics.h](src/mqtt/MqttTopics.h). **Adding a board = add an env block in `platformio.ini` and a matching `#elif` branch in those two files** (and the strip-allocation block in [src/main.cpp](src/main.cpp)).
+Environments (defined in [platformio.ini](platformio.ini)): `peg_esp32` (3 strips), `desk_esp32`, `wall_esp32`, `test_esp32`. Each also has an `*_ota` variant (e.g. `desk_esp32_ota`) that uploads over WiFi via ArduinoOTA/espota to `<mqtt_client_id>.local`; auth is injected from `OTA_PASSWORD` by [scripts/ota_auth.py](scripts/ota_auth.py). First flash must be USB. Each sets a `-DDEVICE_ID_ESP32_*` macro plus `LED_PIN_*` / `NUM_LEDS_*` build flags. Per-device identity (MQTT client/unique IDs, names) and topic prefixes are resolved at compile time from that macro in [src/config/Config.h](src/config/Config.h) and [src/mqtt/MqttTopics.h](src/mqtt/MqttTopics.h). **Adding a board = add an env block in `platformio.ini` and a matching `#elif` branch in those two files** (and the strip-allocation block in [src/main.cpp](src/main.cpp)).
 
 There is no test runner wired up — `test/` contains only the PlatformIO placeholder README.
 
@@ -26,7 +26,7 @@ There is no test runner wired up — `test/` contains only the PlatformIO placeh
 
 These two headers are `.gitignore`d and **must be created before the project will compile**:
 
-- `src/config/WifiCreds.h` — defines `WIFI_SSID`, `WIFI_PASSWORD`
+- `src/config/WifiCreds.h` — defines `WIFI_SSID`, `WIFI_PASSWORD`, `OTA_PASSWORD`
 - `src/config/Mqtt.h` — defines `MQTT_SERVER`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASSWORD`
 
 If a build fails on missing symbols from these, the files need creating — do not commit them.

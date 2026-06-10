@@ -1,8 +1,10 @@
 #include <WiFi.h>
+#include <ArduinoOTA.h>
 #include <FastLED.h>
 #include "mqtt/MqttLight.h"
 #include "LEDController.h"
 #include "NetworkManager.h"
+#include "config/Config.h"
 #include "config/Mqtt.h"
 
 #if defined(DEVICE_ID_ESP32_WALL)
@@ -42,6 +44,23 @@ void setup() {
   delay(2000);
 
   NetworkManager::connect();
+
+  ArduinoOTA.setHostname(MQTT_CLIENT_ID);
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+  ArduinoOTA.onStart([]() {
+    // blank the strips: RMT interrupts during a show() could disturb the transfer
+    FastLED.clear();
+    FastLED.show();
+    Serial.println("OTA update starting...");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("OTA progress: %u%%\r", (progress * 100) / total);
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA error[%u]\n", error);
+  });
+  ArduinoOTA.begin();
+
   static LEDController ledController;
 
 #if defined(DEVICE_ID_ESP32_PEG)
@@ -76,6 +95,8 @@ void setup() {
 }
 
 void loop() {
+  ArduinoOTA.handle();
+
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi disconnected, attempting to reconnect...");
     NetworkManager::connect();

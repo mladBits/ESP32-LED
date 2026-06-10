@@ -36,6 +36,7 @@ Library dependencies (declared in `platformio.ini`, fetched automatically): Fast
    #pragma once
    #define WIFI_SSID     "your-ssid"
    #define WIFI_PASSWORD "your-password"
+   #define OTA_PASSWORD  "choose-an-ota-password"
    ```
 
    `src/config/Mqtt.h`
@@ -68,6 +69,24 @@ pio run -e desk_esp32 -t upload -t monitor  # flash, then open serial monitor (1
 | `test_esp32`  | 1      | WS2812B, bench testing         |
 
 To add a board, add an `[env:...]` block in `platformio.ini` (with its `-DDEVICE_ID_ESP32_*`, `LED_PIN_*`, and `NUM_LEDS_*` flags) and a matching branch in `src/config/Config.h`, `src/mqtt/MqttTopics.h`, and `src/main.cpp`.
+
+### OTA updates (upload over WiFi)
+
+Each device also has an `*_ota` environment that uploads over WiFi instead of USB:
+
+```bash
+pio run -e desk_esp32_ota -t upload
+```
+
+- The **first flash of a device must be over USB** (the OTA code has to be on the board before it can receive updates). After that, OTA works from anywhere on the LAN.
+- Uploads are authenticated with the `OTA_PASSWORD` from `WifiCreds.h` — the build reads it automatically (`scripts/ota_auth.py`), nothing extra to pass.
+- The device is addressed as `<mqtt_client_id>.local` (e.g. `esp32_desk_led.local`). If mDNS doesn't resolve on your machine (common on Windows without Bonjour), pass the device IP instead:
+
+  ```bash
+  pio run -e desk_esp32_ota -t upload --upload-port 192.168.1.42
+  ```
+- The LEDs blank during the transfer and the device reboots into the new firmware.
+- If the device is mid MQTT-reconnect (broker down), it can be unresponsive to OTA for up to ~30 s — just retry.
 
 ## Control
 
