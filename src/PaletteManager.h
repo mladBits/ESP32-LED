@@ -12,4 +12,5 @@ class PaletteManager {
         PaletteManager();
         const CRGBPalette16* getPaletteByName(const char* name) const;
         void buildPaletteJson(JsonDocument& doc) const;
+        void addPaletteOptions(JsonArray arr) const;
 };

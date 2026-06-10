@@ -168,3 +168,9 @@ void PaletteManager::buildPaletteJson(JsonDocument& doc) const {
         arr.add(kv.first.c_str());
     }
 }
+
+void PaletteManager::addPaletteOptions(JsonArray arr) const {
+    for (auto& kv : paletteMap) {
+        arr.add(kv.first.c_str());
+    }
+}

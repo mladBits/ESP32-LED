@@ -65,7 +65,7 @@ void setup() {
 
   FastLED.setBrightness(75);
   
-  mqttClient.setBufferSize(1024);
+  mqttClient.setBufferSize(2048);
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
 
   mqttLight.setController(&ledController);

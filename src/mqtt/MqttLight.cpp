@@ -119,10 +119,50 @@ void MqttLight::publishDeviceConfig() {
     for (uint8_t i = 0; i < ar.getSize(); i++) {
        effectList.add(animations[i]->getName());
     }
-    
+
+    // Group this light and the palette select under the same HA device.
+    JsonObject device = doc["device"].to<JsonObject>();
+    JsonArray ids = device["identifiers"].to<JsonArray>();
+    ids.add(MQTT_UNIQUE_ID);
+    device["name"] = MQTT_NAME;
+
     String payload;
     serializeJson(doc, payload);
     client.publish(CONFIG_TOPIC, payload.c_str(), true);
+}
+
+// Advertises palettes as a Home Assistant `select` entity so they can be
+// chosen from a dropdown, grouped under the same device as the light.
+void MqttLight::publishPaletteSelectConfig() {
+    JsonDocument doc;
+    doc["name"]             = "Palette";
+    doc["unique_id"]        = MQTT_UNIQUE_ID "_palette";
+    doc["command_topic"]    = PALETTE_SET_TOPIC;
+    // HA `select` publishes the raw option; wrap it into the JSON the callback expects.
+    doc["command_template"] = "{\"palette\": \"{{ value }}\"}";
+    doc["state_topic"]      = PALETTE_STATE_TOPIC;
+    doc["value_template"]   = "{{ value_json.palette }}";
+
+    JsonArray options = doc["options"].to<JsonArray>();
+    pm.addPaletteOptions(options);
+
+    JsonObject device = doc["device"].to<JsonObject>();
+    JsonArray ids = device["identifiers"].to<JsonArray>();
+    ids.add(MQTT_UNIQUE_ID);
+    device["name"] = MQTT_NAME;
+
+    String payload;
+    serializeJson(doc, payload);
+    client.publish(PALETTE_SELECT_CONFIG_TOPIC, payload.c_str(), true);
+}
+
+void MqttLight::publishPaletteState() {
+    JsonDocument doc;
+    doc["palette"] = currentPaletteName;
+
+    char buffer[64];
+    serializeJson(doc, buffer, sizeof(buffer));
+    client.publish(PALETTE_STATE_TOPIC, buffer, true);
 }
 
 void MqttLight::reconnect() {
@@ -133,6 +173,7 @@ void MqttLight::reconnect() {
 
             publishDeviceConfig();
             publishPaletteList();
+            publishPaletteSelectConfig();
 
             Serial.print("Subscribing to ");
             Serial.println(SET_TOPIC);
@@ -144,6 +185,7 @@ void MqttLight::reconnect() {
 
             // publish default state.
             publishState();
+            publishPaletteState();
         } else {
             Serial.printf("MQTT connect failed, rc=%d. Retrying...\n", client.state());
             if (millis() - start > 30000) { // stop retrying after 30s
@@ -270,6 +312,8 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
                 return;
             }
             ledController->updatePalette(*targetPalette);
+            currentPaletteName = palette;
+            publishPaletteState();
         }   
     }
 }

@@ -63,6 +63,8 @@ class MqttLight {
         EffectMode effectWanted = EffectMode::SOLID;
         Animation* wantedAnimation = nullptr;
 
+        // palette selection (defaults to the Strip default, RainbowColors_p)
+        String currentPaletteName = "RainbowColors";
 
         void init();
         void callback(char* topic, byte* payload, unsigned int length);
@@ -70,4 +72,6 @@ class MqttLight {
         void publishState();
         void publishDeviceConfig();
         void publishPaletteList();
+        void publishPaletteSelectConfig();
+        void publishPaletteState();
 };
