@@ -152,7 +152,33 @@ PaletteManager::PaletteManager() {
             CHSV(170, 255, 180),
             CHSV(43, 255, 180)
         )},
-        
+        // The four palettes below use a mirrored gradient layout (hue rises
+        // through the first half, falls back through the second) so they
+        // loop seamlessly under ColorWave's LINEARBLEND sweep.
+        {"Synthwave", CRGBPalette16(   // deep purple -> hot pink -> sunset orange
+            CHSV(192, 255, 255), CHSV(204, 255, 255), CHSV(216, 255, 255), CHSV(228, 255, 255),
+            CHSV(240, 255, 255), CHSV(250, 240, 255), CHSV(4, 230, 255),  CHSV(12, 230, 255),
+            CHSV(20, 230, 255),  CHSV(12, 230, 255),  CHSV(4, 230, 255),  CHSV(250, 240, 255),
+            CHSV(240, 255, 255), CHSV(228, 255, 255), CHSV(216, 255, 255), CHSV(204, 255, 255)
+        )},
+        {"Vaporwave", CRGBPalette16(   // cyan -> lavender -> pink
+            CHSV(128, 255, 255), CHSV(140, 230, 255), CHSV(151, 220, 255), CHSV(162, 210, 255),
+            CHSV(173, 210, 255), CHSV(184, 220, 255), CHSV(195, 230, 255), CHSV(205, 240, 255),
+            CHSV(216, 255, 255), CHSV(205, 240, 255), CHSV(195, 230, 255), CHSV(184, 220, 255),
+            CHSV(173, 210, 255), CHSV(162, 210, 255), CHSV(151, 220, 255), CHSV(140, 230, 255)
+        )},
+        {"Nebula", CRGBPalette16(      // deep blue -> violet -> magenta, with depth
+            CHSV(160, 255, 180), CHSV(168, 255, 210), CHSV(176, 240, 240), CHSV(184, 230, 255),
+            CHSV(192, 230, 255), CHSV(200, 240, 240), CHSV(208, 255, 210), CHSV(216, 255, 190),
+            CHSV(224, 255, 255), CHSV(216, 255, 190), CHSV(208, 255, 210), CHSV(200, 240, 240),
+            CHSV(192, 230, 255), CHSV(184, 230, 255), CHSV(176, 240, 240), CHSV(168, 255, 210)
+        )},
+        {"EmeraldDrift", CRGBPalette16( // teal -> emerald -> spring green
+            CHSV(120, 255, 220), CHSV(114, 240, 235), CHSV(108, 230, 250), CHSV(101, 220, 255),
+            CHSV(95, 210, 255),  CHSV(88, 220, 255),  CHSV(82, 230, 250),  CHSV(76, 240, 235),
+            CHSV(70, 255, 220),  CHSV(76, 240, 235),  CHSV(82, 230, 250),  CHSV(88, 220, 255),
+            CHSV(95, 210, 255),  CHSV(101, 220, 255), CHSV(108, 230, 250), CHSV(114, 240, 235)
+        )},
     };
 }
 
