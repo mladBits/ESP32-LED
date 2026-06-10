@@ -66,7 +66,6 @@ pio run -e desk_esp32 -t upload -t monitor  # flash, then open serial monitor (1
 | `desk_esp32`  | 1      | WS2812B                        |
 | `wall_esp32`  | 1      | WS2811                         |
 | `peg_esp32`   | 3      | WS2812B                        |
-| `test_esp32`  | 1      | WS2812B, bench testing         |
 
 To add a board, add an `[env:...]` block in `platformio.ini` (with its `-DDEVICE_ID_ESP32_*`, `LED_PIN_*`, and `NUM_LEDS_*` flags) and a matching branch in `src/config/Config.h`, `src/mqtt/MqttTopics.h`, and `src/main.cpp`.
 
@@ -86,7 +85,7 @@ pio run -e desk_esp32_ota -t upload
   pio run -e desk_esp32_ota -t upload --upload-port 192.168.1.42
   ```
 - The LEDs blank during the transfer and the device reboots into the new firmware.
-- If the device is mid MQTT-reconnect (broker down), it can be unresponsive to OTA for up to ~30 s — just retry.
+- OTA stays responsive even while the MQTT broker is unreachable (reconnect attempts are non-blocking).
 
 ## Testing
 

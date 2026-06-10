@@ -66,6 +66,11 @@ class MqttLight {
         // palette selection (defaults to the Strip default, RainbowColors_p)
         String currentPaletteName = "RainbowColors";
 
+        // non-blocking reconnect pacing; initialized one interval in the
+        // past (unsigned wrap) so the first attempt at boot is immediate
+        static constexpr uint32_t reconnectIntervalMs = 5000;
+        uint32_t lastReconnectAttemptMs = 0 - reconnectIntervalMs;
+
         void init();
         void callback(char* topic, byte* payload, unsigned int length);
         void reconnect();

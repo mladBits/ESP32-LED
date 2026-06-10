@@ -155,35 +155,35 @@ void MqttLight::publishPaletteState() {
     client.publish(PALETTE_STATE_TOPIC, buffer, true);
 }
 
+// Single non-blocking connection attempt, rate-limited to one every
+// reconnectIntervalMs. Animations, brightness fades, and OTA keep running
+// while the broker is unreachable; loop() retries until it returns.
 void MqttLight::reconnect() {
-    unsigned long start = millis();
-    while (!client.connected()) {
-        if (client.connect(MQTT_CLIENT_ID, mqttUser, mqttPass)) {
-            Serial.println("Connected to MQTT Broker");
+    const uint32_t now = millis();
+    if (now - lastReconnectAttemptMs < reconnectIntervalMs) return;
+    lastReconnectAttemptMs = now;
 
-            publishDeviceConfig();
-            publishPaletteList();
-            publishPaletteSelectConfig();
+    if (client.connect(MQTT_CLIENT_ID, mqttUser, mqttPass)) {
+        Serial.println("Connected to MQTT Broker");
 
-            Serial.print("Subscribing to ");
-            Serial.println(SET_TOPIC);
-            client.subscribe(SET_TOPIC);
+        publishDeviceConfig();
+        publishPaletteList();
+        publishPaletteSelectConfig();
 
-            Serial.print("Subscribing to ");
-            Serial.println(PALETTE_SET_TOPIC);
-            client.subscribe(PALETTE_SET_TOPIC);
+        Serial.print("Subscribing to ");
+        Serial.println(SET_TOPIC);
+        client.subscribe(SET_TOPIC);
 
-            // publish default state.
-            publishState();
-            publishPaletteState();
-        } else {
-            Serial.printf("MQTT connect failed, rc=%d. Retrying...\n", client.state());
-            if (millis() - start > 30000) { // stop retrying after 30s
-                Serial.println("MQTT connection timeout");
-                break;
-            }
-            delay(2000);
-        }
+        Serial.print("Subscribing to ");
+        Serial.println(PALETTE_SET_TOPIC);
+        client.subscribe(PALETTE_SET_TOPIC);
+
+        // publish default state.
+        publishState();
+        publishPaletteState();
+    } else {
+        Serial.printf("MQTT connect failed, rc=%d. Retrying in %lus...\n",
+                      client.state(), (unsigned long)(reconnectIntervalMs / 1000));
     }
 }
 
