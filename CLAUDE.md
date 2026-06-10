@@ -47,7 +47,7 @@ The control flow is a one-directional pipeline: **MQTT message → `MqttLight` (
 
 - **[src/Strip.h](src/Strip.h)** — per-strip state struct: `leds` pointer + count, `currentPalette`/`targetPalette` (animations blend current toward target), `direction`, and the active `Animation*`.
 
-- **Animations** ([src/animation/](src/animation/)) — each implements the `Animation` interface (`update(Strip&)` + `getName()`). They are **stateless singletons**: instantiated once in [AnimationRegistry.cpp](src/animation/AnimationRegistry.cpp), looked up by name, and write directly into `strip.leds`. The registry's `list()`/`getByName()` also feed the HA `effect_list`. **To add an animation: create the class, add the member + `animations[count++]` line in the registry constructor.** (Note: `CyberPulse.h` pairs with the misspelled `CyperPulse.cpp`.)
+- **Animations** ([src/animation/](src/animation/)) — each implements the `Animation` interface (`update(Strip&)` + `getName()`). They are **stateless singletons**: instantiated once in [AnimationRegistry.cpp](src/animation/AnimationRegistry.cpp), looked up by name, and write directly into `strip.leds`. The registry's `list()`/`getByName()` also feed the HA `effect_list`. **To add an animation: create the class, add the member + `animations[count++]` line in the registry constructor** (and bump `capacity` in [AnimationRegistry.h](src/animation/AnimationRegistry.h) if full).
 
 - **[src/PaletteManager.cpp](src/PaletteManager.cpp)** — name→`CRGBPalette16` map; serializes the available palette names to JSON for the `palette/list` topic and resolves incoming palette selections.
 

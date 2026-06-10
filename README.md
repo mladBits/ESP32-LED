@@ -112,7 +112,7 @@ Sending a `color` switches back to solid-color mode. Current state is published 
 Home Assistant's auto-generated **Palette** select sends this for you. The available options are published to `…/palette/list`, and the current selection to `…/palette/state`.
 
 ### Built-in effects
-`Plasma`, `ColorWave`, `Pacifica`, `Cyber Pulse`, `Neon Grid Breathing`, `Ember Bloom`
+`Plasma`, `ColorWave`, `Pacifica`
 
 ### Palettes
 A range of FastLED built-ins (RainbowColors, OceanColors, LavaColors, …) plus custom palettes (SunsetColors, Cyberpunk, ToxicSlime, NeonStorm, and more). The full, current list is whatever the device publishes to `…/palette/list`.
