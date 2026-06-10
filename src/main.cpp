@@ -2,8 +2,8 @@
 #include <ArduinoOTA.h>
 #include <FastLED.h>
 #include "mqtt/MqttLight.h"
-#include "LEDController.h"
-#include "NetworkManager.h"
+#include "led/LEDController.h"
+#include "net/NetworkManager.h"
 #include "config/Config.h"
 #include "config/Mqtt.h"
 

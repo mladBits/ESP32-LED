@@ -1,4 +1,4 @@
-#include "LEDController.h"
+#include "led/LEDController.h"
 
 void LEDController::addStrip(CRGB* ledArray, int count) {
     if (numStrips < MAX_STRIPS) {

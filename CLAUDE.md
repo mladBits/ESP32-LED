@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Firmware for ESP32 boards that drive WS2812B/WS2811 addressable LED strips. Despite the README mentioning a REST API, the actual control path is **MQTT with Home Assistant discovery** — the device auto-registers as an HA `light` entity and is controlled via JSON command messages. Built with PlatformIO + Arduino framework + FastLED.
+Firmware for ESP32 boards that drive WS2812B/WS2811 addressable LED strips. The control path is **MQTT with Home Assistant discovery** — the device auto-registers as an HA `light` entity (plus a `select` entity for palettes) and is controlled via JSON command messages. Built with PlatformIO + Arduino framework + FastLED.
 
 ## Build / Upload / Monitor
 
@@ -43,20 +43,20 @@ The control flow is a one-directional pipeline: **MQTT message → `MqttLight` (
   - `callback()` parses HA JSON commands on `SET_TOPIC` (state/brightness/color/effect/`effect_dir`) and palette selections on `PALETTE_SET_TOPIC`.
   - On (re)connect it publishes HA discovery config (`publishDeviceConfig`) and the palette list, then subscribes.
 
-- **[src/LEDController.cpp](src/LEDController.cpp)** — thin fan-out layer. Holds up to `MAX_STRIPS` (8) `Strip`s and applies every operation (clear, fill solid, animate, set palette/direction) across all of them. Stateless beyond the strip array + `isOn`.
+- **[src/led/LEDController.cpp](src/led/LEDController.cpp)** — thin fan-out layer. Holds up to `MAX_STRIPS` (8) `Strip`s and applies every operation (clear, fill solid, animate, set palette/direction) across all of them. Stateless beyond the strip array + `isOn`.
 
-- **[src/Strip.h](src/Strip.h)** — per-strip state struct: `leds` pointer + count, `currentPalette`/`targetPalette` (animations blend current toward target), `direction`, and the active `Animation*`.
+- **[src/led/Strip.h](src/led/Strip.h)** — per-strip state struct: `leds` pointer + count, `currentPalette`/`targetPalette` (animations blend current toward target), `direction`, and the active `Animation*`.
 
 - **Animations** ([src/animation/](src/animation/)) — each implements the `Animation` interface (`update(Strip&)` + `getName()`). They are **stateless singletons**: instantiated once in [AnimationRegistry.cpp](src/animation/AnimationRegistry.cpp), looked up by name, and write directly into `strip.leds`. The registry's `list()`/`getByName()` also feed the HA `effect_list`. **To add an animation: create the class, add the member + `animations[count++]` line in the registry constructor** (and bump `capacity` in [AnimationRegistry.h](src/animation/AnimationRegistry.h) if full).
 
-- **[src/PaletteManager.cpp](src/PaletteManager.cpp)** — name→`CRGBPalette16` map; serializes the available palette names to JSON for the `palette/list` topic and resolves incoming palette selections.
+- **[src/led/PaletteManager.cpp](src/led/PaletteManager.cpp)** — name→`CRGBPalette16` map; serializes the available palette names to JSON for the `palette/list` topic and resolves incoming palette selections.
 
-- **[src/HomeAssistantColor.h](src/HomeAssistantColor.h)** — conversions between HA's hue-degrees/sat-percent and FastLED's 0–255 hue/sat. Anywhere color crosses the MQTT boundary, it goes through these.
+- **[src/mqtt/HomeAssistantColor.h](src/mqtt/HomeAssistantColor.h)** — conversions between HA's hue-degrees/sat-percent and FastLED's 0–255 hue/sat. Anywhere color crosses the MQTT boundary, it goes through these.
 
-- **[src/NetworkManager.h](src/NetworkManager.h)** — static WiFi connect helper (STA mode, retry loop). `loop()` reconnects if WiFi drops.
+- **[src/net/NetworkManager.h](src/net/NetworkManager.h)** — static WiFi connect helper (STA mode, retry loop). `loop()` reconnects if WiFi drops.
 
 ## Conventions
 
 - Device-specific behavior is handled with **compile-time `#if defined(DEVICE_ID_ESP32_*)` branches**, not runtime config. When touching anything device-specific, update every branch.
-- Animations and palettes are registered in single constructors ([AnimationRegistry.cpp](src/animation/AnimationRegistry.cpp), [PaletteManager.cpp](src/PaletteManager.cpp)) — those are the registration choke points.
+- Animations and palettes are registered in single constructors ([AnimationRegistry.cpp](src/animation/AnimationRegistry.cpp), [PaletteManager.cpp](src/led/PaletteManager.cpp)) — those are the registration choke points.
 - Render work in `MqttLight::loop()` is guarded against redundant `applyHsv`/`show` calls via `prev*` caches; preserve that when modifying the render path to avoid pointless FastLED churn.

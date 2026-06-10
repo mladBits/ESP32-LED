@@ -1,6 +1,6 @@
 #pragma once
 #include <FastLED.h>
-#include "Strip.h"
+#include "led/Strip.h"
 #include "AnimationDirection.h"
 
 class Animation {

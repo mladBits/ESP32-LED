@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Animation.h"
-#include "PaletteManager.h"
+#include "led/PaletteManager.h"
 #include "PlasmaState.h"
 #include "ColorWave.h"
 #include "Pacifica.h"

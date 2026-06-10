@@ -88,6 +88,22 @@ pio run -e desk_esp32_ota -t upload
 - The LEDs blank during the transfer and the device reboots into the new firmware.
 - If the device is mid MQTT-reconnect (broker down), it can be unresponsive to OTA for up to ~30 s — just retry.
 
+## Project Structure
+
+```
+src/
+├── main.cpp          # Entry point: strip allocation, FastLED + MQTT wiring, main loop
+├── animation/        # Animation interface, implementations, and name-based registry
+├── config/           # Per-device identity + local secrets (WifiCreds.h / Mqtt.h, gitignored)
+├── led/              # LEDController (multi-strip fan-out), Strip state, PaletteManager
+├── mqtt/             # MqttLight (HA discovery, JSON commands, state), topics, HA color conversion
+└── net/              # WiFi connection management
+scripts/              # PlatformIO build helpers (OTA auth injection)
+```
+
+The control flow is a one-directional pipeline:
+**MQTT message → `MqttLight` → `LEDController` → `Strip` → `Animation` → `FastLED.show()`**
+
 ## Control
 
 All control is via MQTT. In normal use you interact through the Home Assistant UI — the light card for power/brightness/color/effect, and the **Palette** dropdown for the color palette. The topics below are documented for reference and manual testing. The base prefix is `homeassistant/light/<device>` (e.g. `homeassistant/light/esp32_desk_led`).

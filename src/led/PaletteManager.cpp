@@ -1,4 +1,4 @@
-#include "PaletteManager.h"
+#include "led/PaletteManager.h"
 
 PaletteManager::PaletteManager() {
     paletteMap = {

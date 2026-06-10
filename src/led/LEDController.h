@@ -4,7 +4,7 @@
 #include "animation/Animation.h"
 #include "animation/AnimationRegistry.h"
 #include "animation/AnimationDirection.h"
-#include "Strip.h"
+#include "led/Strip.h"
 
 class LEDController {
     private:

@@ -5,12 +5,12 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
-#include "HomeAssistantColor.h"
+#include "mqtt/HomeAssistantColor.h"
 #include "animation/Animation.h"
 #include "animation/AnimationRegistry.h"
-#include "LEDController.h"
+#include "led/LEDController.h"
+#include "led/PaletteManager.h"
 #include "config/Mqtt.h"
-#include "PaletteManager.h"
 
 
 class MqttLight {
