@@ -1,6 +1,7 @@
 #include "MqttLight.h"
 #include "MqttTopics.h"
 #include "animation/AnimationDirection.h"
+#include "led/ColorMath.h"
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
 : client(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
@@ -10,17 +11,6 @@ void MqttLight::begin() {
     client.setCallback([this](char* topic, byte* payload, unsigned int length) {
         this->callback(topic, payload, length);
     });
-}
-
-static uint8_t lerpHueShortest(uint8_t a, uint8_t b, uint8_t t /*0..255*/) {
-    int16_t diff = (int16_t)b - (int16_t)a;
-
-    // wrap to shortest path on the 0..255 hue circle
-    if (diff > 127) diff -= 256;
-    if (diff < -128) diff += 256;
-
-    // linear interpolation along that shortest diff
-    return (uint8_t)(a + ((diff * (int16_t)t) >> 8));
 }
 
 void MqttLight::loop() {

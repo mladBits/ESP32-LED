@@ -88,6 +88,17 @@ pio run -e desk_esp32_ota -t upload
 - The LEDs blank during the transfer and the device reboots into the new firmware.
 - If the device is mid MQTT-reconnect (broker down), it can be unresponsive to OTA for up to ~30 s — just retry.
 
+## Testing
+
+Pure-logic code (color conversion, hue interpolation, command parsing) is covered by
+host-native unit tests — no hardware required:
+
+```bash
+pio test -e native
+```
+
+See [test/README.md](test/README.md) for the suites and prerequisites.
+
 ## Project Structure
 
 ```
@@ -95,10 +106,11 @@ src/
 ├── main.cpp          # Entry point: strip allocation, FastLED + MQTT wiring, main loop
 ├── animation/        # Animation interface, implementations, and name-based registry
 ├── config/           # Per-device identity + local secrets (WifiCreds.h / Mqtt.h, gitignored)
-├── led/              # LEDController (multi-strip fan-out), Strip state, PaletteManager
+├── led/              # LEDController (multi-strip fan-out), Strip state, PaletteManager, color math
 ├── mqtt/             # MqttLight (HA discovery, JSON commands, state), topics, HA color conversion
 └── net/              # WiFi connection management
 scripts/              # PlatformIO build helpers (OTA auth injection)
+test/                 # Host-native unit tests (pio test -e native)
 ```
 
 The control flow is a one-directional pipeline:

@@ -1,5 +1,4 @@
 #pragma once
-#include <Arduino.h>
 #include <stdint.h>
 
 static inline uint8_t clamp_u8(int v) {
