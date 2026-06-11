@@ -20,20 +20,22 @@ void MqttLight::loop() {
     if (brightness < targetBrightness) brightness++;
     else if (brightness > targetBrightness) brightness--;
     
-    const bool effectiveOn = powerRequestedOn && (brightness > 0);
+    const bool effectiveOn = (brightness > 0);
 
-    //if fully off; stop doing work
+    //if fully off; black out once, then stop doing work
     if (!effectiveOn) {
-        if (brightness == 0 && prevBrightness != 0) {
+        if (!blackedOut) {
             ledController->setBrightness(0);
             ledController->clear();
             ledController->show();
+            blackedOut = true;
             prevBrightness = 0;
             prevHue = 0xFF;
             prevSat = 0xFF;
         }
         return;
     }
+    blackedOut = false; // any render tick re-arms the blackout
 
     ledController->setBrightness(brightness);
 

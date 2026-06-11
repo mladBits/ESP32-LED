@@ -33,10 +33,10 @@ class MqttLight {
  
         LEDController* ledController;
         
-        bool powerRequestedOn = true;
         uint8_t brightness = 0;          // current brightness
         uint8_t targetBrightness = 0;    // fade target
         uint8_t lastOnBrightness = 150;
+        bool blackedOut = false;         // strips cleared+shown after fading to 0
 
         // color
         uint8_t hue = 0;
