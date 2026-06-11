@@ -137,6 +137,9 @@ void MqttLight::publishPaletteSelectConfig() {
 
     JsonArray options = doc["options"].to<JsonArray>();
     pm.addPaletteOptions(options);
+    // Shown as state while an AI-generated palette (PALETTE_DATA_TOPIC) is
+    // active; picking it from HA matches no named palette and does nothing.
+    options.add("Custom");
 
     JsonObject device = doc["device"].to<JsonObject>();
     JsonArray ids = device["identifiers"].to<JsonArray>();
@@ -179,6 +182,10 @@ void MqttLight::reconnect() {
         Serial.print("Subscribing to ");
         Serial.println(PALETTE_SET_TOPIC);
         client.subscribe(PALETTE_SET_TOPIC);
+
+        Serial.print("Subscribing to ");
+        Serial.println(PALETTE_DATA_TOPIC);
+        client.subscribe(PALETTE_DATA_TOPIC);
 
         // publish default state.
         publishState();
@@ -297,6 +304,8 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
     } else if(strncmp(topic, PALETTE_SET_TOPIC, sizeof(PALETTE_SET_TOPIC)) == 0) {
         if (doc["palette"].is<const char*>()) {
             const char* palette = doc["palette"];
+            // "Custom" is only ever entered via PALETTE_DATA_TOPIC; selecting it
+            // from HA falls through the lookup below and is a no-op.
             const CRGBPalette16* targetPalette = pm.getPaletteByName(palette);
             if (!targetPalette) {
                 Serial.print("Invalid palette: ");
@@ -306,7 +315,35 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             ledController->updatePalette(*targetPalette);
             currentPaletteName = palette;
             publishPaletteState();
-        }   
+        }
+    } else if (strncmp(topic, PALETTE_DATA_TOPIC, sizeof(PALETTE_DATA_TOPIC)) == 0) {
+        // Raw palette: exactly 16 "#RRGGBB" entries. Applied directly, never saved —
+        // it lives in strip RAM until replaced or the device reboots.
+        JsonArray colors = doc["colors"].as<JsonArray>();
+        if (colors.isNull() || colors.size() != 16) {
+            Serial.println("Palette data rejected: need a \"colors\" array of 16 entries");
+            return;
+        }
+
+        CRGB entries[16];
+        for (int i = 0; i < 16; i++) {
+            uint8_t r, g, b;
+            const char* hex = colors[i].as<const char*>();
+            if (!parseHexColor(hex, r, g, b)) {
+                Serial.printf("Palette data rejected: bad color at index %d\n", i);
+                return;
+            }
+            entries[i] = CRGB(r, g, b);
+        }
+
+        ledController->updatePalette(CRGBPalette16(
+            entries[0],  entries[1],  entries[2],  entries[3],
+            entries[4],  entries[5],  entries[6],  entries[7],
+            entries[8],  entries[9],  entries[10], entries[11],
+            entries[12], entries[13], entries[14], entries[15]
+        ));
+        currentPaletteName = "Custom";
+        publishPaletteState();
     }
 }
 

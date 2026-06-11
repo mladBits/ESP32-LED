@@ -40,6 +40,48 @@ void wrappingBlend_neverTakesLongPath() {
     }
 }
 
+void hexColor_parsesUppercase() {
+    uint8_t r, g, b;
+    TEST_ASSERT_TRUE(parseHexColor("#1A2B3C", r, g, b));
+    TEST_ASSERT_EQUAL_UINT8(0x1A, r);
+    TEST_ASSERT_EQUAL_UINT8(0x2B, g);
+    TEST_ASSERT_EQUAL_UINT8(0x3C, b);
+}
+
+void hexColor_parsesLowercase() {
+    uint8_t r, g, b;
+    TEST_ASSERT_TRUE(parseHexColor("#ff00aa", r, g, b));
+    TEST_ASSERT_EQUAL_UINT8(0xFF, r);
+    TEST_ASSERT_EQUAL_UINT8(0x00, g);
+    TEST_ASSERT_EQUAL_UINT8(0xAA, b);
+}
+
+void hexColor_parsesBounds() {
+    uint8_t r, g, b;
+    TEST_ASSERT_TRUE(parseHexColor("#000000", r, g, b));
+    TEST_ASSERT_EQUAL_UINT8(0, r);
+    TEST_ASSERT_EQUAL_UINT8(0, g);
+    TEST_ASSERT_EQUAL_UINT8(0, b);
+    TEST_ASSERT_TRUE(parseHexColor("#FFFFFF", r, g, b));
+    TEST_ASSERT_EQUAL_UINT8(255, r);
+    TEST_ASSERT_EQUAL_UINT8(255, g);
+    TEST_ASSERT_EQUAL_UINT8(255, b);
+}
+
+void hexColor_rejectsMalformed() {
+    uint8_t r = 1, g = 2, b = 3;
+    TEST_ASSERT_FALSE(parseHexColor(nullptr, r, g, b));
+    TEST_ASSERT_FALSE(parseHexColor("", r, g, b));
+    TEST_ASSERT_FALSE(parseHexColor("FF00AA", r, g, b));    // missing '#'
+    TEST_ASSERT_FALSE(parseHexColor("#FFF", r, g, b));      // too short
+    TEST_ASSERT_FALSE(parseHexColor("#FF00AABB", r, g, b)); // too long
+    TEST_ASSERT_FALSE(parseHexColor("#GG00AA", r, g, b));   // non-hex chars
+    // outputs untouched on failure
+    TEST_ASSERT_EQUAL_UINT8(1, r);
+    TEST_ASSERT_EQUAL_UINT8(2, g);
+    TEST_ASSERT_EQUAL_UINT8(3, b);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(tZero_returnsStart);
@@ -48,5 +90,9 @@ int main() {
     RUN_TEST(wrapsForwardAcrossZero);
     RUN_TEST(wrapsBackwardAcrossZero);
     RUN_TEST(wrappingBlend_neverTakesLongPath);
+    RUN_TEST(hexColor_parsesUppercase);
+    RUN_TEST(hexColor_parsesLowercase);
+    RUN_TEST(hexColor_parsesBounds);
+    RUN_TEST(hexColor_rejectsMalformed);
     return UNITY_END();
 }

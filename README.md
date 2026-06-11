@@ -7,6 +7,7 @@ Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, co
 - **Solid color mode** — full hue/saturation control with smooth color blending.
 - **Animations** — multiple built-in effects, selectable from the light's effect dropdown.
 - **Palettes** — a separate dropdown selects the color palette animations use.
+- **AI-generated palettes** — describe a palette in plain language and have an LLM generate it, applied live over MQTT (see [Custom palette data](#custom-palette-data--palettedata-json)).
 - **Smooth brightness fading** between levels and on/off.
 - **Per-device builds** — one codebase, multiple boards (number of strips, pins, LED counts) selected at compile time.
 
@@ -137,6 +138,17 @@ Sending a `color` switches back to solid-color mode. Current state is published 
 { "palette": "OceanColors" }
 ```
 Home Assistant's auto-generated **Palette** select sends this for you. The available options are published to `…/palette/list`, and the current selection to `…/palette/state`.
+
+### Custom palette data — `…/palette/data` (JSON)
+Pushes a raw palette directly to the device — exactly 16 hex colors:
+```json
+{ "name": "Sunset Dream", "colors": ["#1A0533", "#3B0A56", "…14 more…"] }
+```
+- The palette is applied immediately with the usual smooth blend; malformed payloads (wrong count, bad hex) are rejected whole.
+- The HA Palette select shows **`Custom`** while one is active (selecting `Custom` manually does nothing).
+- **Nothing is persisted** — the palette lives in RAM and a reboot returns to the default. Publish non-retained.
+
+This is the integration point for AI-generated palettes: a companion **palette-ai** service (in the homelab repo, deployed next to the MQTT broker) listens on `…/palette/generate` for `{ "prompt": "deep ocean bioluminescence" }`, asks an LLM for a matching 16-color palette, caches the result on the broker host, and publishes it here. The device itself stays dumb — anything that can publish 16 colors can drive this topic.
 
 ### Built-in effects
 `Plasma`, `ColorWave`, `Pacifica`
