@@ -53,7 +53,7 @@ The control flow is a one-directional pipeline: **MQTT message → `MqttLight` (
 
 - **[src/mqtt/HomeAssistantColor.h](src/mqtt/HomeAssistantColor.h)** — conversions between HA's hue-degrees/sat-percent and FastLED's 0–255 hue/sat. Anywhere color crosses the MQTT boundary, it goes through these.
 
-- **[src/net/NetworkManager.h](src/net/NetworkManager.h)** — static WiFi connect helper (STA mode, retry loop). `loop()` reconnects if WiFi drops.
+- **[src/net/NetworkManager.h](src/net/NetworkManager.h)** — static WiFi helpers: blocking `connect()` for setup() only; non-blocking, rate-limited `ensureConnected()` called every loop() tick so rendering survives WiFi drops.
 
 ## Conventions
 

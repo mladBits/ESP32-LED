@@ -96,11 +96,6 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
-
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected, attempting to reconnect...");
-    NetworkManager::connect();
-  }
-
+  NetworkManager::ensureConnected();
   mqttLight.loop();
 }
