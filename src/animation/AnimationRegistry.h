@@ -5,6 +5,7 @@
 #include "PlasmaState.h"
 #include "ColorWave.h"
 #include "Pacifica.h"
+#include "Drift.h"
 
 class AnimationRegistry {
 public:
@@ -16,10 +17,11 @@ public:
     Animation* getByName(const char* name) const;
 private:
     size_t count;
-    static constexpr uint8_t capacity = 3;
+    static constexpr uint8_t capacity = 4;
     Animation* animations[capacity];
 
     PlasmaState plasma;
     ColorWave colorWave;
     Pacifica pacifica;
+    Drift drift;
 };
