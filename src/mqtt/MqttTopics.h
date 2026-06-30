@@ -15,6 +15,8 @@
 
 #define STATE_TOPIC        LIGHT_CONFIG_TOPIC "/state"
 #define SET_TOPIC          LIGHT_CONFIG_TOPIC "/set"
+// Periodic device telemetry (power estimate, WiFi, heap, uptime) for metrics.
+#define TELEMETRY_TOPIC    LIGHT_CONFIG_TOPIC "/telemetry"
 #define CONFIG_TOPIC       LIGHT_CONFIG_TOPIC "/config"
 #define PALETTE_SET_TOPIC   LIGHT_CONFIG_TOPIC "/palette/set1"
 #define PALETTE_LIST_TOPIC  LIGHT_CONFIG_TOPIC "/palette/list"

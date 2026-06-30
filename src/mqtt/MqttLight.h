@@ -71,10 +71,15 @@ class MqttLight {
         static constexpr uint32_t reconnectIntervalMs = 5000;
         uint32_t lastReconnectAttemptMs = 0 - reconnectIntervalMs;
 
+        // periodic telemetry publishing (power estimate, RSSI, heap, uptime)
+        static constexpr uint32_t telemetryIntervalMs = 10000;
+        uint32_t lastTelemetryMs = 0 - telemetryIntervalMs;
+
         void init();
         void callback(char* topic, byte* payload, unsigned int length);
         void reconnect();
         void publishState();
+        void publishTelemetry();
         void publishDeviceConfig();
         void publishPaletteList();
         void publishPaletteSelectConfig();

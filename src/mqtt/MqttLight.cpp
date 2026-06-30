@@ -14,9 +14,15 @@ void MqttLight::begin() {
 }
 
 void MqttLight::loop() {
-    if (!client.connected()) reconnect(); 
+    if (!client.connected()) reconnect();
     client.loop();
- 
+
+    const uint32_t tnow = millis();
+    if (client.connected() && tnow - lastTelemetryMs >= telemetryIntervalMs) {
+        lastTelemetryMs = tnow;
+        publishTelemetry();
+    }
+
     if (brightness < targetBrightness) brightness++;
     else if (brightness > targetBrightness) brightness--;
     
@@ -158,6 +164,27 @@ void MqttLight::publishPaletteState() {
     char buffer[64];
     serializeJson(doc, buffer, sizeof(buffer));
     client.publish(PALETTE_STATE_TOPIC, buffer, true);
+}
+
+// Publishes a small JSON telemetry frame for external metrics collection
+// (e.g. mqtt2prometheus -> Prometheus -> Grafana). Non-retained: these are
+// transient samples, not state to replay to new subscribers. current_ma
+// assumes a 5V rail, so it is only meaningful on the 5V WS2812B boards.
+void MqttLight::publishTelemetry() {
+    const uint32_t powerMw = ledController ? ledController->estimatePowerMw() : 0;
+
+    JsonDocument doc;
+    doc["power_mw"]   = powerMw;
+    doc["current_ma"] = powerMw / 5;            // I = P / V, V = 5
+    doc["brightness"] = brightness;
+    doc["leds"]       = ledController ? ledController->getTotalLeds() : 0;
+    doc["rssi"]       = WiFi.RSSI();
+    doc["heap"]       = ESP.getFreeHeap();
+    doc["uptime_s"]   = millis() / 1000;
+
+    char buffer[192];
+    serializeJson(doc, buffer, sizeof(buffer));
+    client.publish(TELEMETRY_TOPIC, buffer);
 }
 
 // Single non-blocking connection attempt, rate-limited to one every

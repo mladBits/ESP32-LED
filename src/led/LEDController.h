@@ -34,6 +34,12 @@ class LEDController {
         void updateDirection(AnimationDirection direction);
 
         uint8_t getNumStrips() const { return numStrips; }
-        
+        uint16_t getTotalLeds() const;
+
+        // Estimated draw of all strips at the active brightness, using
+        // FastLED's own power model (the same one enforcing the power cap).
+        // Calibrated for 5V WS2812B; the 12V WALL strip is only approximate.
+        uint32_t estimatePowerMw() const;
+
         bool isOn = false;
 };

@@ -72,3 +72,21 @@ void LEDController::updateDirection(AnimationDirection direction) {
 }
 
 void LEDController::show() { FastLED.show(); }
+
+uint16_t LEDController::getTotalLeds() const {
+    uint16_t total = 0;
+    for (int i = 0; i < numStrips; i++) {
+        total += strips[i].numLeds;
+    }
+    return total;
+}
+
+uint32_t LEDController::estimatePowerMw() const {
+    // calculate_unscaled_power_mW reports draw as if at full brightness;
+    // scale by the active global brightness to estimate the real draw.
+    uint32_t unscaledMw = 0;
+    for (int i = 0; i < numStrips; i++) {
+        unscaledMw += calculate_unscaled_power_mW(strips[i].leds, strips[i].numLeds);
+    }
+    return (unscaledMw * FastLED.getBrightness()) / 255;
+}
