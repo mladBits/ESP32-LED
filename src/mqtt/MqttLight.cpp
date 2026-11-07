@@ -241,10 +241,14 @@ void MqttLight::publishTelemetry() {
     client.publish(TELEMETRY_TOPIC, buffer);
 }
 
-// Single non-blocking connection attempt, rate-limited to one every
-// reconnectIntervalMs. Animations, brightness fades, and OTA keep running
-// while the broker is unreachable; loop() retries until it returns.
+// Single connection attempt, rate-limited to one every reconnectIntervalMs.
+// Animations, brightness fades, and OTA keep running while the broker is
+// unreachable; loop() retries until it returns. connect() itself blocks until
+// CONNACK or the socket timeout (kept short in main.cpp), so don't attempt it
+// while WiFi is down.
 void MqttLight::reconnect() {
+    if (WiFi.status() != WL_CONNECTED) return;
+
     const uint32_t now = millis();
     if (now - lastReconnectAttemptMs < reconnectIntervalMs) return;
     lastReconnectAttemptMs = now;
