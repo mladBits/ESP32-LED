@@ -153,7 +153,9 @@ void MqttLight::publishPaletteList() {
 void MqttLight::publishDeviceConfig() {
     JsonDocument doc;
     doc["~"]            = LIGHT_CONFIG_TOPIC;
-    doc["name"]         = MQTT_NAME;
+    // null marks the light as the device's main entity: HA shows it under the
+    // device name instead of prefixing the device name onto a duplicate.
+    doc["name"]         = nullptr;
     doc["unique_id"]    = MQTT_UNIQUE_ID;
     doc["schema"]       = "json";
     doc["stat_t"]       = "~/state";
