@@ -5,15 +5,17 @@
 // https://gist.github.com/kriegsman/8281905786e8b2632aeb
 
 #include "ColorWave.h"
+#include "AnimClock.h"
+#include "AnimMath.h"
 
 // This function draws color waves with an ever-changing,
 // widely-varying set of parameters, using a color palette.
 void ColorWave::colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) const
 {
-  uint8_t brightdepth = beatsin88(341, 96, 224);
-  uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256));
+  uint8_t brightdepth = beatsin88(341, 96, 224, AnimClock::timebase());
+  uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256), AnimClock::timebase());
 
-  uint16_t hueinc16 = beatsin88(113, 300, 1500);
+  uint16_t hueinc16 = beatsin88(113, 300, 1500, AnimClock::timebase());
 
   uint16_t brightnesstheta16 = pseudotime;
 
@@ -43,10 +45,10 @@ void ColorWave::colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) co
 
 void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudotime) const
 {
-  uint8_t brightdepth = beatsin88(341, 96, 224);
-  uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256));
+  uint8_t brightdepth = beatsin88(341, 96, 224, AnimClock::timebase());
+  uint16_t brightnessthetainc16 = beatsin88(203, (25 * 256), (40 * 256), AnimClock::timebase());
 
-  uint16_t hueinc16 = beatsin88(113, 300, 1500);
+  uint16_t hueinc16 = beatsin88(113, 300, 1500, AnimClock::timebase());
 
   uint16_t brightnesstheta16 = pseudotime;
 
@@ -84,31 +86,24 @@ void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudoti
   }
 }
 
-// Advances the shared wave time once per frame (not per strip) so all of a
-// device's strips render from the same phase; the helpers above only draw.
+// The wave phase and hue drift are pure functions of the shared clock, so
+// every strip and every board renders the same moment. They are the closed
+// form of the original per-frame accumulators (`+= deltams * beatsin88(...)`,
+// speeds 23..60 and 5..9 units/ms, in Q8 below).
 void ColorWave::update(Strip& strip) const {
+  const uint32_t t = AnimClock::now();
+  const uint16_t pseudotime = beatsinIntegral16(147, 23 * 256, 60 * 256, t);
+  const uint16_t hue16      = beatsinIntegral16(400,  5 * 256,  9 * 256, t);
+
   const uint32_t now = millis();
-
-  if (now != lastFrameMs) {
-    lastFrameMs = now;
-
-    uint16_t ms = (uint16_t)now;
-    uint16_t deltams = ms - sLastMillis;
-    sLastMillis = ms;
-
-    uint8_t msmultiplier = beatsin88(147, 23, 60);
-    sPseudotime += (uint16_t)(deltams * msmultiplier);
-    sHue16 += (uint16_t)(deltams * beatsin88(400, 5, 9));
-  }
-
   if (now - strip.paletteLastBlendMs >= 40) {
     strip.paletteLastBlendMs = now;
     nblendPaletteTowardPalette(strip.currentPalette, strip.targetPalette, 16);
   }
 
 #if defined(DEVICE_ID_ESP32_WALL)
-  colorwaves(strip, sHue16, sPseudotime);
+  colorwaves(strip, hue16, pseudotime);
 #else
-  colorwavesCenter(strip, sHue16, sPseudotime);
+  colorwavesCenter(strip, hue16, pseudotime);
 #endif
 }

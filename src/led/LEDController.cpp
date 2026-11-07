@@ -1,4 +1,5 @@
 #include "led/LEDController.h"
+#include "animation/AnimClock.h"
 
 void LEDController::addStrip(CRGB* ledArray, int count) {
     if (numStrips < MAX_STRIPS) {
@@ -117,6 +118,8 @@ void LEDController::powerOnReveal(uint8_t progress) {
 }
 
 void LEDController::animate() {
+    // One clock reading per frame: every strip renders the same instant.
+    AnimClock::beginFrame();
     for (int i = 0; i < numStrips; i++) {
         if (strips[i].animation) {
             strips[i].animation->update(strips[i]);

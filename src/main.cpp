@@ -4,6 +4,7 @@
 #include "mqtt/MqttLight.h"
 #include "led/LEDController.h"
 #include "net/NetworkManager.h"
+#include "animation/AnimClock.h"
 #include "config/Config.h"
 #include "config/Mqtt.h"
 
@@ -44,6 +45,9 @@ void setup() {
   delay(2000);
 
   NetworkManager::connect();
+  // Shared clock so animations line up across boards (SNTP retries if
+  // WiFi isn't up yet).
+  AnimClock::begin();
 
   ArduinoOTA.setHostname(MQTT_CLIENT_ID);
   ArduinoOTA.setPassword(OTA_PASSWORD);

@@ -1,6 +1,7 @@
 #include "MqttLight.h"
 #include "MqttTopics.h"
 #include "animation/AnimationDirection.h"
+#include "animation/AnimClock.h"
 #include "led/ColorMath.h"
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
@@ -245,6 +246,9 @@ void MqttLight::publishTelemetry() {
     doc["rssi"]       = WiFi.RSSI();
     doc["heap"]       = ESP.getFreeHeap();
     doc["uptime_s"]   = millis() / 1000;
+    // false = SNTP hasn't set the clock yet, so animations aren't synced
+    // with the other boards.
+    doc["clock_synced"] = AnimClock::synced();
 
     char buffer[192];
     serializeJson(doc, buffer, sizeof(buffer));
