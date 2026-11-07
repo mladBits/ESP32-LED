@@ -455,11 +455,20 @@ void MqttLight::publishState() {
     doc["state"] = ledController->isOn ? "ON" : "OFF";
     doc["brightness"] = targetBrightness;
 
+    // HA's JSON light ignores "color" in a state message without "color_mode".
+    doc["color_mode"] = "hs";
     JsonObject color = doc["color"].to<JsonObject>();
     color["h"] = fastHueToHaDeg(hue);
     color["s"] = fastSatToHaPct(sat);
-    
-    char buffer[128];
+
+    // null clears HA's effect once back on a solid colour.
+    if (effectWanted == EffectMode::ANIMATION && wantedAnimation) {
+        doc["effect"] = wantedAnimation->getName();
+    } else {
+        doc["effect"] = nullptr;
+    }
+
+    char buffer[192];
     serializeJson(doc, buffer, sizeof(buffer));
     client.publish(STATE_TOPIC, buffer, true);
 }
