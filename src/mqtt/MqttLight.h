@@ -38,6 +38,16 @@ class MqttLight {
         uint8_t lastOnBrightness = 150;
         bool blackedOut = false;         // strips cleared+shown after fading to 0
 
+        // one-shot power-down collapse played when toggling off
+        bool shuttingDown = false;
+        uint32_t shutdownStartMs = 0;
+        static constexpr uint16_t shutdownDurationMs = 700;
+
+        // one-shot power-on bloom played when toggling on
+        bool poweringOn = false;
+        uint32_t powerOnStartMs = 0;
+        static constexpr uint16_t powerOnDurationMs = 650;
+
         // color
         uint8_t hue = 0;
         uint8_t sat = 0;
@@ -77,6 +87,8 @@ class MqttLight {
 
         void init();
         void callback(char* topic, byte* payload, unsigned int length);
+        void stepShutdown();
+        void stepPowerOnMask();
         void reconnect();
         void publishState();
         void publishTelemetry();

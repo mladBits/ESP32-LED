@@ -23,6 +23,13 @@ void MqttLight::loop() {
         publishTelemetry();
     }
 
+    // Power-down collapse owns the strips until it finishes, then hands off to
+    // the normal blacked-out idle below.
+    if (shuttingDown) {
+        stepShutdown();
+        return;
+    }
+
     if (brightness < targetBrightness) brightness++;
     else if (brightness > targetBrightness) brightness--;
     
@@ -72,7 +79,10 @@ void MqttLight::loop() {
         }
 
         // render blended color; do NOT pass brightness as V (brightness handled by setBrightness)
-        if (brightness != prevBrightness || solidHueCur != prevHue || solidSatCur != prevSat) {
+        // While powering on, repaint every tick so the expanding reveal window
+        // always has fresh solid content to uncover (the cache would otherwise
+        // skip the repaint and leave revealed pixels black).
+        if (poweringOn || brightness != prevBrightness || solidHueCur != prevHue || solidSatCur != prevSat) {
             ledController->applyHsv(solidHueCur, solidSatCur, 255);
             prevHue = solidHueCur;
             prevSat = solidSatCur;
@@ -80,7 +90,51 @@ void MqttLight::loop() {
         }
     }
 
+    // Carve the freshly-rendered frame with the expanding power-on window.
+    if (poweringOn) stepPowerOnMask();
+
     ledController->show();
+}
+
+// Drives the one-shot power-down collapse. Runs every tick while shuttingDown
+// is set; on completion it forces the strips fully dark and re-arms the normal
+// blacked-out idle (matching the fully-off branch in loop()).
+void MqttLight::stepShutdown() {
+    const uint32_t elapsed = millis() - shutdownStartMs;
+
+    if (elapsed >= shutdownDurationMs) {
+        shuttingDown = false;
+        brightness = 0;
+        targetBrightness = 0;
+        ledController->setBrightness(0);
+        ledController->clear();
+        ledController->show();
+        blackedOut = true;
+        prevBrightness = 0;
+        prevHue = 0xFF;
+        prevSat = 0xFF;
+        return;
+    }
+
+    // Hold the pre-off brightness so the collapsing colours stay visible; the
+    // effect fades itself to black.
+    const uint8_t progress = (uint8_t)((elapsed * 255UL) / shutdownDurationMs);
+    ledController->setBrightness(brightness);
+    ledController->shutdownCollapse(progress);
+    ledController->show();
+}
+
+// Applies the expanding power-on window to the already-rendered frame. Runs
+// each tick while poweringOn is set (after the normal render, before show());
+// clears the flag once the reveal has fully opened.
+void MqttLight::stepPowerOnMask() {
+    const uint32_t elapsed = millis() - powerOnStartMs;
+    if (elapsed >= powerOnDurationMs) {
+        poweringOn = false;
+        return;
+    }
+    const uint8_t progress = (uint8_t)((elapsed * 255UL) / powerOnDurationMs);
+    ledController->powerOnReveal(progress);
 }
 
 void MqttLight::setController(LEDController* controller) {
@@ -319,13 +373,27 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
 
             ledController->isOn = false;
             targetBrightness = 0;
+
+            // Play the power-down collapse instead of a plain fade. brightness
+            // is left where it is so the effect renders the live colours before
+            // fading itself to black.
+            shuttingDown = true;
+            shutdownStartMs = millis();
+            poweringOn = false;     // cancel a bloom still in progress
             // turn on leds from an off state.
         } else if (!ledController->isOn && isTargetStateOn) {
             ledController->isOn = true;
+            shuttingDown = false;   // cancel any in-progress power-down
             // default brightness when turning on/off
             if (!b) {
                 targetBrightness = lastOnBrightness;
             }
+
+            // Burst on from the centre instead of a slow fade: jump straight to
+            // the target brightness and let the spatial reveal be the show.
+            brightness = targetBrightness;
+            poweringOn = true;
+            powerOnStartMs = millis();
         }
         publishState();
     } else if(strncmp(topic, PALETTE_SET_TOPIC, sizeof(PALETTE_SET_TOPIC)) == 0) {
