@@ -1,13 +1,13 @@
 # ESP32 LED Strip Controller
 
-Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects), a `select` entity for color palettes and a `text` entity for AI palette prompts — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
+Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects) plus a `select` entity for color palettes — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
 
 ## Features
 - **Home Assistant MQTT discovery** — the device registers itself automatically; no YAML.
 - **Solid color mode** — full hue/saturation control with smooth color blending.
 - **Animations** — multiple built-in effects, selectable from the light's effect dropdown.
 - **Palettes** — a separate dropdown selects the color palette animations use.
-- **AI-generated palettes** — type a mood into the device's **Palette prompt** box in Home Assistant and an LLM generates a matching palette, applied live over MQTT (see [Custom palette data](#custom-palette-data--palettedata-json)).
+- **AI-generated palettes** — type a mood into the **Palette prompt** box of the *Palette AI* device in Home Assistant (added by the companion palette-ai service) and an LLM generates a matching palette, applied live over MQTT (see [Custom palette data](#custom-palette-data--palettedata-json)).
 - **Synced animations** — boards share an NTP-synced clock, so the same effect on several boards moves in step.
 - **Smooth brightness fading** between levels and on/off.
 - **Per-device builds** — one codebase, multiple boards (number of strips, pins, LED counts) selected at compile time.
@@ -151,7 +151,7 @@ Pushes a raw palette directly to the device — exactly 16 hex colors:
 
 This is the integration point for AI-generated palettes: a companion **palette-ai** service (in the homelab repo, deployed next to the MQTT broker) listens on `…/palette/generate` for `{ "prompt": "deep ocean bioluminescence" }`, asks an LLM for a matching 16-color palette, caches the result on the broker host, and publishes it here. The device itself stays dumb — anything that can publish 16 colors can drive this topic.
 
-Each device also announces a **Palette prompt** text entity in Home Assistant. Whatever you type is sent to `…/palette/generate` as `{ "prompt": "…" }` (JSON-escaped), so typing a mood there recolors the lights once palette-ai answers. The device never reads that topic itself; if palette-ai isn't running, nothing happens.
+In Home Assistant, palette-ai adds its own **Palette AI** device: a **Palette prompt** box that publishes to `homeassistant/light/all/palette/generate` and routes by what you write ("… for the wall" goes only to the wall; naming no strip goes to every strip), and a **Status** line saying what happened to the last prompt (generating, applied to which strips, or why it failed). The ESP32 never reads the generate topic itself; if palette-ai is down, its entities show as unavailable.
 
 ### Built-in effects
 - `Plasma` — overlapping waves with dark gaps.
