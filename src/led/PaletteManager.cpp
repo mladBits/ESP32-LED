@@ -1,185 +1,161 @@
 #include "led/PaletteManager.h"
 
+// Gradient palettes: {index, r, g, b} stops that FastLED interpolates into a
+// smooth 16-entry palette. The last stop must be index 255.
+//
+// Tuned for ColorWave/Drift, which sweep indices 0..240 back and forth, so a
+// palette reads A -> E and needn't loop back to its first colour (the 240 stop
+// is the last colour actually shown). Beams wraps around the index range, so
+// it shows a seam where the last colour meets the first.
+//
+// Values are LED drive levels, not screen colours: LEDs are linear, so low
+// values look brighter than on a monitor and pastels wash out to white. Keep
+// colours saturated, and never put opposite hues (red/green, orange/blue)
+// next to each other: their linear blend passes through grey/olive.
+
+// --- Cyberpunk ---
+
+// Hot pink -> violet -> electric indigo -> azure -> cyan.
+DEFINE_GRADIENT_PALETTE(NeonArcade_gp) {
+      0, 255,   0, 120,
+     64, 170,   0, 255,
+    128,  40,   0, 255,
+    192,   0,  90, 255,
+    240,   0, 220, 255,
+    255,   0, 220, 255};
+
+// Indigo -> magenta -> hot pink -> orange -> amber.
+DEFINE_GRADIENT_PALETTE(Synthwave_gp) {
+      0,  50,   0, 150,
+     64, 180,   0, 200,
+    128, 255,   0,  90,
+    192, 255,  50,   0,
+    240, 255, 140,   0,
+    255, 255, 140,   0};
+
+// Teal -> deep blue -> plum -> crimson -> amber: cool to warm through the
+// dark purple side, avoiding the muddy teal/orange midpoint.
+DEFINE_GRADIENT_PALETTE(NeonNoir_gp) {
+      0,   0, 200, 170,
+     64,   0,  40, 140,
+    128,  90,   0, 120,
+    192, 220,   0,  40,
+    240, 255, 100,   0,
+    255, 255, 100,   0};
+
+// Violet -> blue -> aqua -> acid lime -> yellow-lime.
+DEFINE_GRADIENT_PALETTE(AcidRain_gp) {
+      0,  60,   0, 160,
+     64,   0,  50, 255,
+    128,   0, 220, 160,
+    192, 100, 255,   0,
+    240, 200, 255,   0,
+    255, 200, 255,   0};
+
+// --- Moody botanical ---
+
+// Pine -> forest -> moss -> jade -> deep teal.
+DEFINE_GRADIENT_PALETTE(DeepForest_gp) {
+      0,   0,  60,  35,
+     64,  10, 110,  10,
+    128,  70, 150,   0,
+    192,   0, 120,  70,
+    240,   0,  70,  70,
+    255,   0,  70,  70};
+
+// Leaf green -> teal -> indigo -> plum -> orchid: foliage into night flowers,
+// bridged through blue to avoid the grey green/purple midpoint.
+DEFINE_GRADIENT_PALETTE(Nightshade_gp) {
+      0,   0, 100,  30,
+     64,   0,  90,  90,
+    128,  25,  20, 150,
+    192, 100,   0, 120,
+    240, 210,  20, 130,
+    255, 210,  20, 130};
+
+// Moss -> olive -> amber -> rust -> oxblood: autumn undergrowth.
+DEFINE_GRADIENT_PALETTE(Lichen_gp) {
+      0,  30, 110,   0,
+     64, 110, 120,   0,
+    128, 200,  90,   0,
+    192, 170,  35,   0,
+    240, 110,  10,   5,
+    255, 110,  10,   5};
+
+// --- Others to try ---
+
+// Green -> teal -> blue -> violet -> magenta.
+DEFINE_GRADIENT_PALETTE(Aurora_gp) {
+      0,   0, 255,  80,
+     64,   0, 200, 180,
+    128,   0,  60, 255,
+    192, 120,   0, 255,
+    240, 255,   0, 170,
+    255, 255,   0, 170};
+
+// Navy -> ocean blue -> teal -> aquamarine -> seafoam.
+DEFINE_GRADIENT_PALETTE(DeepSea_gp) {
+      0,   0,  10,  90,
+     64,   0,  50, 210,
+    128,   0, 150, 170,
+    192,   0, 230, 150,
+    240,  70, 255, 200,
+    255,  70, 255, 200};
+
+// Deep red -> red-orange -> orange -> amber -> gold (no white-hot core).
+DEFINE_GRADIENT_PALETTE(Firelight_gp) {
+      0, 120,   0,   0,
+     64, 255,  15,   0,
+    128, 255,  60,   0,
+    192, 255, 120,   0,
+    240, 255, 170,  15,
+    255, 255, 170,  15};
+
+// Pink -> orchid -> lavender-blue -> sky.
+DEFINE_GRADIENT_PALETTE(CottonCandy_gp) {
+      0, 255,  30, 110,
+     80, 200,  40, 220,
+    160, 110,  70, 255,
+    240,  40, 140, 255,
+    255,  40, 140, 255};
+
+// Red-orange -> orange -> yellow -> lime -> green.
+DEFINE_GRADIENT_PALETTE(Citrus_gp) {
+      0, 255,  30,   0,
+     64, 255, 100,   0,
+    128, 255, 190,   0,
+    192, 140, 255,   0,
+    240,  30, 255,  40,
+    255,  30, 255,  40};
+
+// Deep blue -> blue -> ice blue -> frost -> near-white.
+DEFINE_GRADIENT_PALETTE(Glacier_gp) {
+      0,   0,  20, 110,
+     64,   0,  80, 230,
+    128,  60, 170, 255,
+    192, 160, 220, 255,
+    240, 230, 245, 255,
+    255, 230, 245, 255};
+
 PaletteManager::PaletteManager() {
     paletteMap = {
         {"RainbowColors", RainbowColors_p},
-        {"RainbowStripeColors", RainbowStripeColors_p},
-        {"PartyColors", PartyColors_p},
-        {"HeatColors", HeatColors_p},
-        {"OceanColors", OceanColors_p},
-        {"CloudColors", CloudColors_p},
-        {"LavaColors", LavaColors_p},
-        {"ForestColors", ForestColors_p},
-        {"SunsetColors", CRGBPalette16(
-            CHSV(3, 255, 255), CHSV(11, 255, 255), CHSV(22, 255, 255), CHSV(33, 255, 255),
-            CHSV(6, 200, 255), CHSV(17, 200, 255), CHSV(28, 200, 255), CHSV(39, 200, 255),
-            CHSV(9, 150, 255), CHSV(21, 150, 255), CHSV(32, 150, 255), CHSV(43, 150, 255),
-            CHSV(0, 128, 255), CHSV(14, 128, 255), CHSV(26, 128, 255), CHSV(37, 128, 255)
-        )},
-        {"AuroraColors", CRGBPalette16(
-            CHSV(80, 255, 255), CHSV(91, 255, 255), CHSV(71, 200, 255), CHSV(85, 255, 128),
-            CHSV(64, 200, 255), CHSV(96, 200, 255), CHSV(78, 255, 200), CHSV(88, 128, 255),
-            CHSV(66, 255, 255), CHSV(92, 200, 255), CHSV(74, 200, 255), CHSV(83, 255, 200),
-            CHSV(81, 128, 255), CHSV(87, 255, 255), CHSV(76, 200, 255), CHSV(84, 128, 255)
-        )},
-        {"CandyColors", CRGBPalette16(
-            CHSV(213, 255, 255), CHSV(228, 200, 255), CHSV(236, 255, 200), CHSV(242, 128, 255),
-            CHSV(216, 255, 255), CHSV(230, 200, 255), CHSV(238, 255, 200), CHSV(244, 128, 255),
-            CHSV(219, 255, 255), CHSV(223, 200, 255), CHSV(230, 255, 200), CHSV(238, 128, 255),
-            CHSV(213, 255, 255), CHSV(228, 200, 255), CHSV(236, 255, 200), CHSV(242, 128, 255)
-        )},
-        {"NeonColors", CRGBPalette16(
-            CHSV(114, 255, 255), CHSV(136, 255, 255), CHSV(142, 200, 255), CHSV(128, 255, 200),
-            CHSV(121, 255, 255), CHSV(132, 200, 255), CHSV(148, 255, 200), CHSV(157, 128, 255),
-            CHSV(118, 255, 255), CHSV(129, 200, 255), CHSV(138, 255, 200), CHSV(145, 128, 255),
-            CHSV(116, 255, 255), CHSV(132, 200, 255), CHSV(142, 255, 200), CHSV(148, 128, 255)
-        )},
-        {"SunriseColors", CRGBPalette16(
-            CHSV(5, 255, 255), CHSV(13, 200, 255), CHSV(20, 150, 255), CHSV(30, 128, 255),
-            CHSV(7, 255, 255), CHSV(14, 200, 255), CHSV(28, 150, 255), CHSV(42, 128, 255),
-            CHSV(8, 255, 255), CHSV(15, 200, 255), CHSV(31, 150, 255), CHSV(47, 128, 255),
-            CHSV(10, 255, 255), CHSV(18, 200, 255), CHSV(32, 150, 255), CHSV(50, 128, 255)
-        )},
-        {"NeonViolet", CRGBPalette16(
-            CHSV(131, 255, 255), CHSV(141, 200, 255), CHSV(125, 255, 200), CHSV(155, 128, 255),
-            CHSV(136, 255, 255), CHSV(146, 200, 255), CHSV(127, 255, 200), CHSV(158, 128, 255),
-            CHSV(132, 255, 255), CHSV(142, 200, 255), CHSV(124, 255, 200), CHSV(154, 128, 255),
-            CHSV(131, 255, 255), CHSV(141, 200, 255), CHSV(125, 255, 200), CHSV(155, 128, 255)
-        )},
-        {"PinkCyanFusion", CRGBPalette16(CHSV(136, 255, 255), 
-            CHSV(142, 200, 255),  
-            CHSV(149, 255, 255),  
-            CHSV(159, 180, 255),  
-            CHSV(170, 255, 255),  
-            CHSV(180, 200, 255),  
-            CHSV(191, 255, 255),  
-            CHSV(202, 200, 255),  
-            CHSV(213, 255, 255),  
-            CHSV(224, 180, 255),  
-            CHSV(236, 255, 255),  
-            CHSV(247, 200, 255),  
-            CHSV(0,   255, 255),  
-            CHSV(11,  200, 255),  
-            CHSV(21,  255, 255),  
-            CHSV(32,  180, 255))},
-        {"Cyberpunk", CRGBPalette16(
-            CHSV(200, 255, 255), CHSV(220, 200, 255), CHSV(230, 255, 200), CHSV(245, 180, 255),
-            CHSV(195, 255, 255), CHSV(210, 200, 255), CHSV(225, 255, 200), CHSV(240, 180, 255),
-            CHSV(205, 255, 255), CHSV(215, 200, 255), CHSV(235, 255, 200), CHSV(250, 180, 255),
-            CHSV(200, 255, 255), CHSV(220, 200, 255), CHSV(230, 255, 200), CHSV(245, 180, 255)
-        )},
-        {"ToxicSlime", CRGBPalette16(
-            CHSV(80, 255, 255), CHSV(90, 200, 255), CHSV(100, 255, 200), CHSV(70, 180, 255),
-            CHSV(85, 255, 255), CHSV(95, 200, 255), CHSV(105, 255, 200), CHSV(75, 180, 255),
-            CHSV(82, 255, 255), CHSV(92, 200, 255), CHSV(102, 255, 200), CHSV(72, 180, 255),
-            CHSV(88, 255, 255), CHSV(98, 200, 255), CHSV(108, 255, 200), CHSV(78, 180, 255)
-        )},
-        {"IceFire", CRGBPalette16(
-            CHSV(160, 255, 255), CHSV(170, 200, 255), CHSV(30, 255, 255), CHSV(20, 200, 255),
-            CHSV(165, 255, 200), CHSV(175, 200, 255), CHSV(35, 255, 200), CHSV(25, 180, 255),
-            CHSV(160, 255, 255), CHSV(170, 200, 255), CHSV(30, 255, 255), CHSV(20, 200, 255),
-            CHSV(165, 255, 200), CHSV(175, 200, 255), CHSV(35, 255, 200), CHSV(25, 180, 255)
-        )},
-        {"RetroArcade", CRGBPalette16(
-            CHSV(0, 255, 255),   // Red
-            CHSV(43, 255, 255),  // Yellow
-            CHSV(85, 255, 255),  // Green
-            CHSV(170, 255, 255), // Blue
-            CHSV(213, 255, 255), // Purple
-            CHSV(0, 255, 200),
-            CHSV(85, 255, 200),
-            CHSV(170, 255, 200),
-            CHSV(43, 255, 180),
-            CHSV(213, 200, 255),
-            CHSV(0, 200, 180),
-            CHSV(85, 200, 180),
-            CHSV(170, 200, 180),
-            CHSV(43, 200, 180),
-            CHSV(213, 180, 255),
-            CHSV(0, 255, 255)
-        )},
-        {"MidnightGlow", CRGBPalette16(
-            CHSV(170, 255, 80), CHSV(180, 255, 150), CHSV(200, 200, 255), CHSV(220, 180, 200),
-            CHSV(160, 255, 100), CHSV(190, 200, 255), CHSV(210, 150, 200), CHSV(230, 180, 180),
-            CHSV(175, 255, 120), CHSV(195, 200, 200), CHSV(215, 150, 255), CHSV(225, 180, 180),
-            CHSV(165, 255, 90),  CHSV(185, 200, 255), CHSV(205, 150, 200), CHSV(220, 180, 180)
-        )},
-        {"DeepSea", CRGBPalette16(
-            CHSV(160, 200, 80), CHSV(170, 255, 150), CHSV(180, 180, 200), CHSV(190, 180, 150),
-            CHSV(165, 220, 100), CHSV(175, 200, 180), CHSV(185, 180, 200), CHSV(195, 150, 150),
-            CHSV(160, 180, 120), CHSV(170, 200, 160), CHSV(180, 180, 180), CHSV(190, 160, 140),
-            CHSV(165, 200, 100), CHSV(175, 200, 180), CHSV(185, 150, 180), CHSV(195, 120, 120)
-        )},
-        {"WarmEmber", CRGBPalette16(
-            CHSV(10, 200, 80), CHSV(15, 220, 150), CHSV(20, 180, 120), CHSV(25, 180, 180),
-            CHSV(12, 220, 100), CHSV(18, 200, 150), CHSV(22, 150, 100), CHSV(28, 180, 140),
-            CHSV(10, 180, 120), CHSV(16, 200, 160), CHSV(20, 180, 140), CHSV(26, 160, 120),
-            CHSV(12, 200, 90),  CHSV(18, 180, 140), CHSV(22, 150, 120), CHSV(28, 120, 100)
-        )},
-        {"TwilightFade", CRGBPalette16(
-            CHSV(190, 180, 100), CHSV(200, 160, 150), CHSV(210, 140, 180), CHSV(220, 160, 200),
-            CHSV(200, 160, 120), CHSV(210, 140, 150), CHSV(220, 120, 180), CHSV(230, 140, 180),
-            CHSV(195, 180, 120), CHSV(205, 160, 160), CHSV(215, 140, 200), CHSV(225, 160, 160),
-            CHSV(200, 160, 120), CHSV(210, 140, 150), CHSV(220, 120, 160), CHSV(230, 100, 140)
-        )},
-        {"NeonStorm", CRGBPalette16(
-            CHSV(200, 255, 255), CHSV(210, 255, 255), CHSV(0, 255, 255), CHSV(25, 255, 255),
-            CHSV(160, 255, 255), CHSV(180, 255, 255), CHSV(45, 255, 255), CHSV(60, 255, 255),
-            CHSV(195, 255, 255), CHSV(220, 255, 255), CHSV(0, 255, 200), CHSV(25, 255, 200),
-            CHSV(165, 255, 200), CHSV(185, 255, 200), CHSV(50, 255, 200), CHSV(65, 255, 200)
-        )},
-        {"ArcaneFire", CRGBPalette16(
-            CHSV(170, 255, 255), CHSV(180, 200, 200), CHSV(30, 255, 255), CHSV(200, 200, 255),
-            CHSV(175, 255, 200), CHSV(185, 200, 200), CHSV(35, 255, 200), CHSV(205, 200, 200),
-            CHSV(170, 255, 255), CHSV(180, 200, 200), CHSV(30, 255, 255), CHSV(200, 200, 255),
-            CHSV(175, 255, 200), CHSV(185, 200, 200), CHSV(35, 255, 200), CHSV(205, 200, 200)
-        )},
-        {"TechnicolorPulse", CRGBPalette16(
-            CHSV(0, 255, 255),   // Red
-            CHSV(85, 255, 255),  // Green
-            CHSV(170, 255, 255), // Blue
-            CHSV(43, 255, 255),  // Yellow
-            CHSV(213, 255, 255), // Purple
-            CHSV(128, 255, 255), // Cyan
-            CHSV(0, 255, 200),
-            CHSV(85, 255, 200),
-            CHSV(170, 255, 200),
-            CHSV(43, 255, 200),
-            CHSV(213, 255, 200),
-            CHSV(128, 255, 200),
-            CHSV(0, 255, 180),
-            CHSV(85, 255, 180),
-            CHSV(170, 255, 180),
-            CHSV(43, 255, 180)
-        )},
-        // The four palettes below use a mirrored gradient layout (hue rises
-        // through the first half, falls back through the second) so they
-        // loop seamlessly under ColorWave's LINEARBLEND sweep.
-        {"Synthwave", CRGBPalette16(   // deep purple -> hot pink -> sunset orange
-            CHSV(192, 255, 255), CHSV(204, 255, 255), CHSV(216, 255, 255), CHSV(228, 255, 255),
-            CHSV(240, 255, 255), CHSV(250, 240, 255), CHSV(4, 230, 255),  CHSV(12, 230, 255),
-            CHSV(20, 230, 255),  CHSV(12, 230, 255),  CHSV(4, 230, 255),  CHSV(250, 240, 255),
-            CHSV(240, 255, 255), CHSV(228, 255, 255), CHSV(216, 255, 255), CHSV(204, 255, 255)
-        )},
-        {"Vaporwave", CRGBPalette16(   // cyan -> lavender -> pink
-            CHSV(128, 255, 255), CHSV(140, 230, 255), CHSV(151, 220, 255), CHSV(162, 210, 255),
-            CHSV(173, 210, 255), CHSV(184, 220, 255), CHSV(195, 230, 255), CHSV(205, 240, 255),
-            CHSV(216, 255, 255), CHSV(205, 240, 255), CHSV(195, 230, 255), CHSV(184, 220, 255),
-            CHSV(173, 210, 255), CHSV(162, 210, 255), CHSV(151, 220, 255), CHSV(140, 230, 255)
-        )},
-        {"Nebula", CRGBPalette16(      // deep blue -> violet -> magenta, with depth
-            CHSV(160, 255, 180), CHSV(168, 255, 210), CHSV(176, 240, 240), CHSV(184, 230, 255),
-            CHSV(192, 230, 255), CHSV(200, 240, 240), CHSV(208, 255, 210), CHSV(216, 255, 190),
-            CHSV(224, 255, 255), CHSV(216, 255, 190), CHSV(208, 255, 210), CHSV(200, 240, 240),
-            CHSV(192, 230, 255), CHSV(184, 230, 255), CHSV(176, 240, 240), CHSV(168, 255, 210)
-        )},
-        {"EmeraldDrift", CRGBPalette16( // teal -> emerald -> spring green
-            CHSV(120, 255, 220), CHSV(114, 240, 235), CHSV(108, 230, 250), CHSV(101, 220, 255),
-            CHSV(95, 210, 255),  CHSV(88, 220, 255),  CHSV(82, 230, 250),  CHSV(76, 240, 235),
-            CHSV(70, 255, 220),  CHSV(76, 240, 235),  CHSV(82, 230, 250),  CHSV(88, 220, 255),
-            CHSV(95, 210, 255),  CHSV(101, 220, 255), CHSV(108, 230, 250), CHSV(114, 240, 235)
-        )},
-    };
+
+        {"NeonArcade",  CRGBPalette16(NeonArcade_gp)},
+        {"Synthwave",   CRGBPalette16(Synthwave_gp)},
+        {"NeonNoir",    CRGBPalette16(NeonNoir_gp)},
+        {"AcidRain",    CRGBPalette16(AcidRain_gp)},
+
+        {"DeepForest",  CRGBPalette16(DeepForest_gp)},
+        {"Nightshade",  CRGBPalette16(Nightshade_gp)},
+        {"Lichen",      CRGBPalette16(Lichen_gp)},
+
+        {"Aurora",      CRGBPalette16(Aurora_gp)},
+        {"DeepSea",     CRGBPalette16(DeepSea_gp)},
+        {"Firelight",   CRGBPalette16(Firelight_gp)},
+        {"CottonCandy", CRGBPalette16(CottonCandy_gp)},
+        {"Citrus",      CRGBPalette16(Citrus_gp)},
+        {"Glacier",     CRGBPalette16(Glacier_gp)}};
 }
 
 
