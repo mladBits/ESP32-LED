@@ -222,14 +222,14 @@ void MqttLight::publishPaletteState() {
 
 // Publishes a small JSON telemetry frame for external metrics collection
 // (e.g. mqtt2prometheus -> Prometheus -> Grafana). Non-retained: these are
-// transient samples, not state to replay to new subscribers. current_ma
-// assumes a 5V rail, so it is only meaningful on the 5V WS2812B boards.
+// transient samples, not state to replay to new subscribers. current_ma uses
+// the board's LED supply voltage (LED_VOLTS build flag).
 void MqttLight::publishTelemetry() {
     const uint32_t powerMw = ledController ? ledController->estimatePowerMw() : 0;
 
     JsonDocument doc;
     doc["power_mw"]   = powerMw;
-    doc["current_ma"] = powerMw / 5;            // I = P / V, V = 5
+    doc["current_ma"] = powerMw / LED_VOLTS;    // I = P / V
     doc["brightness"] = brightness;
     doc["leds"]       = ledController ? ledController->getTotalLeds() : 0;
     doc["rssi"]       = WiFi.RSSI();
