@@ -7,8 +7,6 @@
 #include "Pacifica.h"
 #include "Drift.h"
 #include "Beams.h"
-#include "Ripple.h"
-#include "Embers.h"
 
 class AnimationRegistry {
 public:
@@ -20,7 +18,7 @@ public:
     Animation* getByName(const char* name) const;
 private:
     size_t count;
-    static constexpr uint8_t capacity = 7;
+    static constexpr uint8_t capacity = 5;
     Animation* animations[capacity];
 
     PlasmaState plasma;
@@ -28,6 +26,4 @@ private:
     Pacifica pacifica;
     Drift drift;
     Beams beams;
-    Ripple ripple;
-    Embers embers;
 };
