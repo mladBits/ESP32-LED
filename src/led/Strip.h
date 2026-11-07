@@ -33,6 +33,7 @@ struct Strip {
     leds(_leds),
     numLeds(_numLeds),
     currentPalette(_current),
-    targetPalette(_target)
+    targetPalette(_target),
+    direction(_direction)
     {}
 };
