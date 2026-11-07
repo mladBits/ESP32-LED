@@ -80,13 +80,13 @@ pio run -e desk_esp32_ota -t upload
 
 - The **first flash of a device must be over USB** (the OTA code has to be on the board before it can receive updates). After that, OTA works from anywhere on the LAN.
 - Uploads are authenticated with the `OTA_PASSWORD` from `WifiCreds.h` — the build reads it automatically (`scripts/ota_auth.py`), nothing extra to pass.
-- The device is addressed as `<mqtt_client_id>.local` (e.g. `esp32_desk_led.local`). If mDNS doesn't resolve on your machine (common on Windows without Bonjour), pass the device IP instead:
+- Each `*_ota` env targets the board's fixed LAN IP (`upload_port` in `platformio.ini`), since mDNS `.local` names often don't resolve on Windows. If a board's IP changes, update `upload_port`, or override it for one upload:
 
   ```bash
   pio run -e desk_esp32_ota -t upload --upload-port 192.168.1.42
   ```
 - The LEDs blank during the transfer and the device reboots into the new firmware.
-- OTA stays responsive even while the MQTT broker is unreachable (reconnect attempts are non-blocking).
+- OTA stays responsive even while the MQTT broker is unreachable (reconnect attempts are rate-limited and time out within a few seconds).
 
 ## Testing
 
