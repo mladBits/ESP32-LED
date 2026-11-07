@@ -370,9 +370,12 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             int br = doc["brightness"].as<int>();
             if (br < 0) br = 0;
             if (br > 255) br = 255;
-            targetBrightness = (uint8_t)br;
+            if (br > 0) lastOnBrightness = (uint8_t)br;
 
-            if (targetBrightness > 0) lastOnBrightness = targetBrightness;
+            // While off (and not being turned on), only remember the level for
+            // the next turn-on; applying it would light the strips while the
+            // reported state stays OFF.
+            if (ledController->isOn || isTargetStateOn) targetBrightness = (uint8_t)br;
         }
 
         // turn off leds from an on state.
