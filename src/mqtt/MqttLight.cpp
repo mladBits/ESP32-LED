@@ -174,15 +174,25 @@ void MqttLight::publishDeviceConfig() {
        effectList.add(animations[i]->getName());
     }
 
-    // Group this light and the palette select under the same HA device.
-    JsonObject device = doc["device"].to<JsonObject>();
-    JsonArray ids = device["identifiers"].to<JsonArray>();
-    ids.add(MQTT_UNIQUE_ID);
-    device["name"] = MQTT_NAME;
+    addDeviceInfo(doc);
 
     String payload;
     serializeJson(doc, payload);
     client.publish(CONFIG_TOPIC, payload.c_str(), true);
+}
+
+// Device block shared by every entity, grouping them under one HA device that
+// shows the running firmware version, plus the origin HA logs for discovery.
+void MqttLight::addDeviceInfo(JsonDocument& doc) {
+    JsonObject device = doc["device"].to<JsonObject>();
+    JsonArray ids = device["identifiers"].to<JsonArray>();
+    ids.add(MQTT_UNIQUE_ID);
+    device["name"]       = MQTT_NAME;
+    device["sw_version"] = FW_VERSION;
+
+    JsonObject origin = doc["origin"].to<JsonObject>();
+    origin["name"]       = "ESP32-LED";
+    origin["sw_version"] = FW_VERSION;
 }
 
 // Advertises palettes as a Home Assistant `select` entity so they can be
@@ -204,10 +214,7 @@ void MqttLight::publishPaletteSelectConfig() {
     // active; picking it from HA matches no named palette and does nothing.
     options.add("Custom");
 
-    JsonObject device = doc["device"].to<JsonObject>();
-    JsonArray ids = device["identifiers"].to<JsonArray>();
-    ids.add(MQTT_UNIQUE_ID);
-    device["name"] = MQTT_NAME;
+    addDeviceInfo(doc);
 
     String payload;
     serializeJson(doc, payload);

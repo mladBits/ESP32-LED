@@ -21,3 +21,8 @@
 #define MQTT_NAME       "ESP32 Test LED 66"
 
 #endif
+
+// `git describe` of the build, injected by scripts/fw_version.py.
+#ifndef FW_VERSION
+#define FW_VERSION "unknown"
+#endif

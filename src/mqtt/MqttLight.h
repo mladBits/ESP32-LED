@@ -93,6 +93,7 @@ class MqttLight {
         void publishState();
         void publishTelemetry();
         void publishDeviceConfig();
+        void addDeviceInfo(JsonDocument& doc);
         void publishPaletteList();
         void publishPaletteSelectConfig();
         void publishPaletteState();
