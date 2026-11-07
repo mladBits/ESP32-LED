@@ -1,0 +1,69 @@
+name: CI
+
+# Every push, on any branch, plus manual runs from the Actions tab.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests (native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-native-${{ hashFiles('platformio.ini') }}
+      - run: pip install platformio==6.2.0
+      - run: pio test -e native
+
+  build:
+    name: Build ${{ matrix.env }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [peg_esp32, desk_esp32, wall_esp32]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Per-board key: each job caches the toolchain plus its own libraries.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.platformio
+            .pio/libdeps
+          key: pio-${{ runner.os }}-${{ matrix.env }}-${{ hashFiles('platformio.ini') }}
+      - run: pip install platformio==6.2.0
+      # The real headers are gitignored (WiFi/MQTT/OTA secrets). Placeholders
+      # defining the same macros let the firmware compile; CI never flashes.
+      - name: Create placeholder credential headers
+        run: |
+          cat > src/config/WifiCreds.h <<'EOF'
+          #pragma once
+          #define WIFI_SSID     "ci-placeholder"
+          #define WIFI_PASSWORD "ci-placeholder"
+          #define OTA_PASSWORD  "ci-placeholder"
+          EOF
+          cat > src/config/Mqtt.h <<'EOF'
+          #pragma once
+          #define MQTT_SERVER   "127.0.0.1"
+          #define MQTT_PORT     1883
+          #define MQTT_USER     "ci-placeholder"
+          #define MQTT_PASSWORD "ci-placeholder"
+          EOF
+      - run: pio run -e ${{ matrix.env }}

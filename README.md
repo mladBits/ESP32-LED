@@ -1,5 +1,7 @@
 # ESP32 LED Strip Controller
 
+[![CI](https://github.com/mladBits/ESP32-LED/actions/workflows/ci.yml/badge.svg)](https://github.com/mladBits/ESP32-LED/actions/workflows/ci.yml)
+
 Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects) plus a `select` entity for color palettes — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
 
 ## Features

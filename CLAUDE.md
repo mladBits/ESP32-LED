@@ -22,6 +22,8 @@ Environments (defined in [platformio.ini](platformio.ini)): `peg_esp32` (3 strip
 
 Unit tests run on the host (no hardware): `pio test -e native`. They cover only the pure-logic headers — [src/mqtt/HomeAssistantColor.h](src/mqtt/HomeAssistantColor.h), [src/led/ColorMath.h](src/led/ColorMath.h), [src/animation/AnimationDirection.h](src/animation/AnimationDirection.h), [src/animation/AnimMath.h](src/animation/AnimMath.h) — which must stay Arduino-free to remain testable. The `native` env excludes all firmware sources (`build_src_filter = -<*>`); a host GCC must be on PATH.
 
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push: the native tests, plus a build of each board env on Linux (so filename case matters) with placeholder `WifiCreds.h`/`Mqtt.h` written by the workflow. **Adding a board or a credential macro means updating the workflow's matrix or placeholder headers too.**
+
 ## Required local config (gitignored, not in repo)
 
 These two headers are `.gitignore`d and **must be created before the project will compile**:
