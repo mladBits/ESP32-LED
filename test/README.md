@@ -12,6 +12,7 @@ pio test -e native
 | `test_home_assistant_color` | HA degrees/percent ↔ FastLED 0–255 conversions, clamping, round trips (`src/mqtt/HomeAssistantColor.h`) |
 | `test_color_math`           | Shortest-path hue interpolation around the 0–255 wrap (`src/led/ColorMath.h`) |
 | `test_animation_direction`  | Direction string parsing and defaulting (`src/animation/AnimationDirection.h`) |
+| `test_anim_math`            | Closed-form animation motion vs a frame-by-frame accumulator, incl. across the 2^32 clock wrap (`src/animation/AnimMath.h`) |
 
 Requires a host GCC on `PATH` (e.g. WinLibs MinGW on Windows: `winget install BrechtSanders.WinLibs.POSIX.UCRT`).
 

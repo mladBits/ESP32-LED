@@ -1,13 +1,14 @@
 # ESP32 LED Strip Controller
 
-Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects) plus a `select` entity for color palettes — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
+Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects), a `select` entity for color palettes and a `text` entity for AI palette prompts — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
 
 ## Features
 - **Home Assistant MQTT discovery** — the device registers itself automatically; no YAML.
 - **Solid color mode** — full hue/saturation control with smooth color blending.
 - **Animations** — multiple built-in effects, selectable from the light's effect dropdown.
 - **Palettes** — a separate dropdown selects the color palette animations use.
-- **AI-generated palettes** — describe a palette in plain language and have an LLM generate it, applied live over MQTT (see [Custom palette data](#custom-palette-data--palettedata-json)).
+- **AI-generated palettes** — type a mood into the device's **Palette prompt** box in Home Assistant and an LLM generates a matching palette, applied live over MQTT (see [Custom palette data](#custom-palette-data--palettedata-json)).
+- **Synced animations** — boards share an NTP-synced clock, so the same effect on several boards moves in step.
 - **Smooth brightness fading** between levels and on/off.
 - **Per-device builds** — one codebase, multiple boards (number of strips, pins, LED counts) selected at compile time.
 
@@ -90,7 +91,7 @@ pio run -e desk_esp32_ota -t upload
 
 ## Testing
 
-Pure-logic code (color conversion, hue interpolation, command parsing) is covered by
+Pure-logic code (color conversion, hue interpolation, command parsing, animation clock math) is covered by
 host-native unit tests — no hardware required:
 
 ```bash
@@ -104,12 +105,12 @@ See [test/README.md](test/README.md) for the suites and prerequisites.
 ```
 src/
 ├── main.cpp          # Entry point: strip allocation, FastLED + MQTT wiring, main loop
-├── animation/        # Animation interface, implementations, and name-based registry
+├── animation/        # Animation interface, implementations, registry, shared NTP clock
 ├── config/           # Per-device identity + local secrets (WifiCreds.h / Mqtt.h, gitignored)
 ├── led/              # LEDController (multi-strip fan-out), Strip state, PaletteManager, color math
 ├── mqtt/             # MqttLight (HA discovery, JSON commands, state), topics, HA color conversion
 └── net/              # WiFi connection management
-scripts/              # PlatformIO build helpers (OTA auth injection)
+scripts/              # PlatformIO build helpers (OTA auth injection, firmware version stamp)
 test/                 # Host-native unit tests (pio test -e native)
 ```
 
@@ -150,12 +151,28 @@ Pushes a raw palette directly to the device — exactly 16 hex colors:
 
 This is the integration point for AI-generated palettes: a companion **palette-ai** service (in the homelab repo, deployed next to the MQTT broker) listens on `…/palette/generate` for `{ "prompt": "deep ocean bioluminescence" }`, asks an LLM for a matching 16-color palette, caches the result on the broker host, and publishes it here. The device itself stays dumb — anything that can publish 16 colors can drive this topic.
 
+Each device also announces a **Palette prompt** text entity in Home Assistant. Whatever you type is sent to `…/palette/generate` as `{ "prompt": "…" }` (JSON-escaped), so typing a mood there recolors the lights once palette-ai answers. The device never reads that topic itself; if palette-ai isn't running, nothing happens.
+
 ### Built-in effects
-`Plasma`, `ColorWave`, `Pacifica`
+- `Plasma` — overlapping waves with dark gaps.
+- `ColorWave` — shifting waves sweeping through the palette.
+- `Pacifica` — layered ocean waves with whitecaps (uses its own blue-green palettes).
+- `Drift` — slow, soft ribbons of palette color that never go dark.
+- `Beams` — soft beams of light gliding along the strip over a dim palette glow.
+- `LavaLamp` — slow noise blobs that morph and drift, like a lava lamp.
+- `CityLights` — lights fading on and off at random over a dim glow, like a skyline at night.
+
+All effects are driven by a shared clock synced over NTP, so the same effect on several boards moves in step (see [Notes](#notes)).
 
 ### Palettes
-A range of FastLED built-ins (RainbowColors, OceanColors, LavaColors, …) plus custom palettes (SunsetColors, Cyberpunk, ToxicSlime, NeonStorm, and more). The full, current list is whatever the device publishes to `…/palette/list`.
+`RainbowColors` (the boot default) plus smooth gradient palettes tuned for the wave effects:
+- Cyberpunk: `NeonArcade`, `Synthwave`, `NeonNoir`, `AcidRain`
+- Moody botanical: `DeepForest`, `Nightshade`, `Lichen`
+- Others: `Aurora`, `DeepSea`, `Firelight`, `CottonCandy`, `Citrus`, `Glacier`
+
+The full, current list is whatever the device publishes to `…/palette/list`.
 
 ## Notes
 - Brightness is applied globally via FastLED, not as the color's value channel, so colors stay true across brightness levels.
+- Animations follow a clock synced over NTP (`pool.ntp.org` by default; build with `-DNTP_SERVER=\"192.168.x.x\"` to use a LAN time server), so boards running the same effect stay in step to within tens of milliseconds. Until a board first syncs it animates on its own time; the telemetry field `clock_synced` shows which boards have synced.
 - Discovery configs are published retained on every (re)connect. If you change unique IDs or see stale entities, remove the device under the MQTT integration and let it re-announce.
