@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>    // millis(); FastLED.h stopped pulling this in as of 3.10.9
 #include <FastLED.h>
 #include "led/Strip.h"
 #include "AnimationDirection.h"
