@@ -25,18 +25,12 @@ void PlasmaState::update(Strip& strip) const {
   plasma(strip);
     //}
 
-  EVERY_N_MILLISECONDS(100) {
+  // Per-strip timer, not EVERY_N_MILLISECONDS: that is one static shared by
+  // every strip, so the first strip would consume each trigger and the rest
+  // would never blend toward a newly selected palette.
+  const uint32_t now = millis();
+  if (now - strip.paletteLastBlendMs >= 100) {
+    strip.paletteLastBlendMs = now;
     nblendPaletteTowardPalette(strip.currentPalette, strip.targetPalette, 24);   // AWESOME palette blending capability.
-  }
-
-  if (strip.animationGeneratesPalette) {
-    EVERY_N_MILLISECONDS(100) {
-        nblendPaletteTowardPalette(strip.currentPalette, strip.targetPalette, 24);   // AWESOME palette blending capability.
-    }
-
-    EVERY_N_SECONDS(5) {                                 // Change the target palette to a random one every 5 seconds.
-        uint8_t baseC = random8();                         // You can use this as a baseline colour if you want similar hues in the next line.
-        strip.targetPalette = CRGBPalette16(CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)), CHSV(baseC+random8(32), 192, random8(128,255)), CHSV(baseC+random8(32), 255, random8(128,255)));
-    }
   }
 }

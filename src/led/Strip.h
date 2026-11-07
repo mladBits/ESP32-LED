@@ -13,9 +13,6 @@ struct Strip {
     CRGBPalette16 currentPalette = RainbowColors_p;
     CRGBPalette16 targetPalette = RainbowColors_p;
 
-    bool usePalette = false;
-    bool animationGeneratesPalette = false;
-
     AnimationDirection direction = Outward;
     const Animation* animation = nullptr; 
 
@@ -29,17 +26,13 @@ struct Strip {
         int _numLeds,
         const CRGBPalette16& _current = RainbowColors_p,
         const CRGBPalette16& _target = RainbowColors_p,
-        bool _usePalette = false,
-        bool _animationGeneratesPalette = false,
         AnimationDirection _direction = Outward
     )
-    : 
-    id(_id), 
+    :
+    id(_id),
     leds(_leds),
     numLeds(_numLeds),
     currentPalette(_current),
-    targetPalette(_target),
-    usePalette(_usePalette),
-    animationGeneratesPalette(_animationGeneratesPalette)
+    targetPalette(_target)
     {}
 };

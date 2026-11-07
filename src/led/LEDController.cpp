@@ -150,8 +150,7 @@ void LEDController::updatePalette(const CRGBPalette16& palette, bool immediate) 
             strips[i].currentPalette = palette;
         }
 
-        strips[i].animationGeneratesPalette = false;
-        strips[i].paletteLastBlendMs = now;        
+        strips[i].paletteLastBlendMs = now;
     }
 }
 
