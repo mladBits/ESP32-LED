@@ -161,11 +161,10 @@ void MqttLight::publishDeviceConfig() {
     doc["stat_t"]       = "~/state";
     doc["cmd_t"]        = "~/set";
     doc["avty_t"]       = "~/availability";
-    doc["brightness"]   = true;
     doc["bri_scl"]      = 255;
-    doc["clrm"]         = true;
     doc["effect"]       = true;
 
+    // Brightness is implied by any colour mode other than onoff.
     JsonArray supportedColors = doc["sup_clrm"].to<JsonArray>();
     supportedColors.add("hs");
 
