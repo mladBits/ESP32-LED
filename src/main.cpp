@@ -90,9 +90,11 @@ void setup() {
   FastLED.setBrightness(75);
   
   mqttClient.setBufferSize(2048);
-  // connect() blocks waiting for CONNACK up to this many seconds (library
-  // default 15), freezing rendering if the broker is up but unresponsive.
-  mqttClient.setSocketTimeout(2);
+  // MQTT connect() blocks rendering twice: the TCP connect (WiFiClient,
+  // default 3s, e.g. broker host powered off), then the CONNACK wait
+  // (PubSubClient, default 15s, broker up but unresponsive). Keep both short.
+  espClient.setTimeout(1);         // seconds
+  mqttClient.setSocketTimeout(2);  // seconds
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
 
   mqttLight.setController(&ledController);
