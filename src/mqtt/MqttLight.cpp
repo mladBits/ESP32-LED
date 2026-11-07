@@ -158,6 +158,7 @@ void MqttLight::publishDeviceConfig() {
     doc["schema"]       = "json";
     doc["stat_t"]       = "~/state";
     doc["cmd_t"]        = "~/set";
+    doc["avty_t"]       = "~/availability";
     doc["brightness"]   = true;
     doc["bri_scl"]      = 255;
     doc["clrm"]         = true;
@@ -194,6 +195,7 @@ void MqttLight::publishPaletteSelectConfig() {
     doc["command_template"] = "{\"palette\": \"{{ value }}\"}";
     doc["state_topic"]      = PALETTE_STATE_TOPIC;
     doc["value_template"]   = "{{ value_json.palette }}";
+    doc["availability_topic"] = AVAILABILITY_TOPIC;
 
     JsonArray options = doc["options"].to<JsonArray>();
     pm.addPaletteOptions(options);
@@ -253,7 +255,8 @@ void MqttLight::reconnect() {
     if (now - lastReconnectAttemptMs < reconnectIntervalMs) return;
     lastReconnectAttemptMs = now;
 
-    if (client.connect(MQTT_CLIENT_ID, mqttUser, mqttPass)) {
+    if (client.connect(MQTT_CLIENT_ID, mqttUser, mqttPass,
+                       AVAILABILITY_TOPIC, 0, true, "offline")) {
         Serial.println("Connected to MQTT Broker");
 
         publishDeviceConfig();
@@ -275,6 +278,7 @@ void MqttLight::reconnect() {
         // publish default state.
         publishState();
         publishPaletteState();
+        client.publish(AVAILABILITY_TOPIC, "online", true);
     } else {
         Serial.printf("MQTT connect failed, rc=%d. Retrying in %lus...\n",
                       client.state(), (unsigned long)(reconnectIntervalMs / 1000));

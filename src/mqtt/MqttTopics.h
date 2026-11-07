@@ -7,6 +7,9 @@
 // Periodic device telemetry (power estimate, WiFi, heap, uptime) for metrics.
 #define TELEMETRY_TOPIC    LIGHT_CONFIG_TOPIC "/telemetry"
 #define CONFIG_TOPIC       LIGHT_CONFIG_TOPIC "/config"
+// Retained "online"/"offline"; the broker publishes "offline" (our last will)
+// when the connection drops without a clean disconnect.
+#define AVAILABILITY_TOPIC LIGHT_CONFIG_TOPIC "/availability"
 #define PALETTE_SET_TOPIC   LIGHT_CONFIG_TOPIC "/palette/set1"
 #define PALETTE_LIST_TOPIC  LIGHT_CONFIG_TOPIC "/palette/list"
 #define PALETTE_STATE_TOPIC LIGHT_CONFIG_TOPIC "/palette/state"
