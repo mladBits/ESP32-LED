@@ -95,9 +95,10 @@ void setup() {
 #endif
 
 #if defined(DEVICE_ID_ESP32_PEG)
-  // Powered by a Mean Well GST60A05-P1J (5V/6A). Cap below its rating with
-  // derating headroom (~4.75A total incl. the ESP32) so a full-white scene
-  // can't overload it. Real scenes peak ~3.5A, well under this.
+  // Currently on a 5V/10A supply, due to be replaced by a Mean Well
+  // GST60A05-P1J (5V/6A). The cap is sized for the Mean Well with derating
+  // headroom (~4.75A total incl. the ESP32), so it stays safe across the swap.
+  // Real scenes peak ~3.5A, well under this.
   FastLED.setMaxPowerInVoltsAndMilliamps(LED_VOLTS, 4500);
 #elif defined(DEVICE_ID_ESP32_WALL)
   FastLED.setMaxPowerInVoltsAndMilliamps(LED_VOLTS, 4000);
