@@ -156,11 +156,9 @@ This is the integration point for AI-generated palettes: a companion **palette-a
 In Home Assistant, palette-ai adds its own **Palette AI** device: a **Palette prompt** box that publishes to `homeassistant/light/all/palette/generate` and routes by what you write ("… for the wall" goes only to the wall; naming no strip goes to every strip), and a **Status** line saying what happened to the last prompt (generating, applied to which strips, or why it failed). The ESP32 never reads the generate topic itself; if palette-ai is down, its entities show as unavailable.
 
 ### Built-in effects
-- `Plasma` — overlapping waves with dark gaps.
 - `ColorWave` — shifting waves sweeping through the palette.
 - `Pacifica` — layered ocean waves with whitecaps (uses its own blue-green palettes).
 - `Drift` — slow, soft ribbons of palette color that never go dark.
-- `Beams` — soft beams of light gliding along the strip over a dim palette glow.
 - `LavaLamp` — slow noise blobs that morph and drift, like a lava lamp.
 - `CityLights` — lights fading on and off at random over a dim glow, like a skyline at night.
 

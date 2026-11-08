@@ -3,10 +3,11 @@
 // Gradient palettes: {index, r, g, b} stops that FastLED interpolates into a
 // smooth 16-entry palette. The last stop must be index 255.
 //
-// Tuned for ColorWave/Drift, which sweep indices 0..240 back and forth, so a
-// palette reads A -> E and needn't loop back to its first colour (the 240 stop
-// is the last colour actually shown). Beams wraps around the index range, so
-// it shows a seam where the last colour meets the first.
+// Tuned for ColorWave, which sweeps indices 0..240 back and forth (LavaLamp
+// folds the same way), so a palette reads A -> E and needn't loop back to its
+// first colour (the 240 stop is the last colour actually shown). Drift wraps
+// around the index range, so it shows a seam where the last colour meets the
+// first.
 //
 // Values are LED drive levels, not screen colours: LEDs are linear, so low
 // values look brighter than on a monitor and pastels wash out to white. Keep
