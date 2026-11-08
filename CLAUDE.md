@@ -22,16 +22,16 @@ Environments (defined in [platformio.ini](platformio.ini)): `peg_esp32` (3 strip
 
 Unit tests run on the host (no hardware): `pio test -e native`. They cover only the pure-logic headers — [src/mqtt/HomeAssistantColor.h](src/mqtt/HomeAssistantColor.h), [src/led/ColorMath.h](src/led/ColorMath.h), [src/animation/AnimationDirection.h](src/animation/AnimationDirection.h), [src/animation/AnimMath.h](src/animation/AnimMath.h) — which must stay Arduino-free to remain testable. The `native` env excludes all firmware sources (`build_src_filter = -<*>`); a host GCC must be on PATH.
 
-CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push: the native tests, plus a build of each board env on Linux (so filename case matters) with placeholder `WifiCreds.h`/`Mqtt.h` written by the workflow. **Adding a board or a credential macro means updating the workflow's matrix or placeholder headers too.**
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push: the native tests, plus a build of each board env on Linux (so filename case matters) **without** the credential headers, i.e. a release-style, secret-free build. **Adding a board means adding it to the workflow's matrix too.**
 
-## Required local config (gitignored, not in repo)
+## Credentials (local headers → board NVS)
 
-These two headers are `.gitignore`d and **must be created before the project will compile**:
+WiFi, MQTT and OTA settings live in each board's NVS storage ([src/config/Credentials.cpp](src/config/Credentials.cpp), `Preferences` namespace `creds`), which survives reboots and firmware updates. Two `.gitignore`d headers are their master copy — never commit them:
 
 - `src/config/WifiCreds.h` — defines `WIFI_SSID`, `WIFI_PASSWORD`, `OTA_PASSWORD`
 - `src/config/Mqtt.h` — defines `MQTT_SERVER`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASSWORD`
 
-If a build fails on missing symbols from these, the files need creating — do not commit them.
+A build **with** them (any local build) uses their values and saves them to NVS when NVS differs, so one normal OTA upload provisions or updates a board. A build **without** them (CI, releases) compiles fine and uses NVS only, so the firmware file contains no secrets. Code reads the global `credentials` struct, never the macros (only `Credentials.cpp` includes the headers). Telemetry `creds_stored` shows whether a board's NVS holds a complete set (i.e. whether a header-free build would boot there). `scripts/ota_auth.py` still reads `OTA_PASSWORD` from the local header to authenticate uploads. Backups of the headers: Proton Drive `backup\esp32-led\config\`. To give a board away, erase its whole flash (`pio run -t erase`) — reflashing alone leaves NVS intact.
 
 ## Architecture
 

@@ -2,6 +2,7 @@
 #include "MqttTopics.h"
 #include "animation/AnimationDirection.h"
 #include "animation/AnimClock.h"
+#include "config/Credentials.h"
 #include "led/ColorMath.h"
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
@@ -249,8 +250,11 @@ void MqttLight::publishTelemetry() {
     // false = SNTP hasn't set the clock yet, so animations aren't synced
     // with the other boards.
     doc["clock_synced"] = AnimClock::synced();
+    // true = NVS holds a complete set of credentials, so a header-free
+    // (release) build would boot and connect on this board.
+    doc["creds_stored"] = credentials.stored;
 
-    char buffer[192];
+    char buffer[256];
     serializeJson(doc, buffer, sizeof(buffer));
     client.publish(TELEMETRY_TOPIC, buffer);
 }

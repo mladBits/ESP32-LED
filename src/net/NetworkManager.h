@@ -1,7 +1,7 @@
 #pragma once
 
 #include <WiFi.h>
-#include "config/WifiCreds.h"
+#include "config/Credentials.h"
 
 class NetworkManager {
 public:
@@ -10,7 +10,11 @@ public:
     static void connect() {
         WiFi.mode(WIFI_STA);
         WiFi.setAutoReconnect(true);
-        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        if (!credentials.wifiSsid[0]) {
+            Serial.println("No WiFi credentials stored; flash a build with the local headers once");
+            return;
+        }
+        WiFi.begin(credentials.wifiSsid, credentials.wifiPassword);
         Serial.println("Connecting to WiFi...");
 
         int retryCount = 0;

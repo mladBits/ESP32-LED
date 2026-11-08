@@ -33,7 +33,7 @@ Library dependencies (declared in `platformio.ini`, fetched automatically): Fast
    git clone https://github.com/mladBits/ESP32-LED.git
    ```
 2. Open the project in PlatformIO.
-3. Create the two local config headers (they are gitignored and **required to compile**):
+3. Create the two local config headers (they are gitignored). The firmware compiles without them, but a board only learns its WiFi/MQTT/OTA settings from a build that has them: on boot it saves their values to its own storage (NVS), where they survive reboots and later firmware updates, including header-free builds such as CI's:
 
    `src/config/WifiCreds.h`
    ```cpp
@@ -108,7 +108,7 @@ See [test/README.md](test/README.md) for the suites and prerequisites.
 src/
 ├── main.cpp          # Entry point: strip allocation, FastLED + MQTT wiring, main loop
 ├── animation/        # Animation interface, implementations, registry, shared NTP clock
-├── config/           # Per-device identity + local secrets (WifiCreds.h / Mqtt.h, gitignored)
+├── config/           # Per-device identity; credentials (NVS-backed, seeded from gitignored WifiCreds.h / Mqtt.h)
 ├── led/              # LEDController (multi-strip fan-out), Strip state, PaletteManager, color math
 ├── mqtt/             # MqttLight (HA discovery, JSON commands, state), topics, HA color conversion
 └── net/              # WiFi connection management

@@ -10,7 +10,6 @@
 #include "animation/AnimationRegistry.h"
 #include "led/LEDController.h"
 #include "led/PaletteManager.h"
-#include "config/Mqtt.h"
 
 
 class MqttLight {

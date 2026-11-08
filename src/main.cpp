@@ -6,7 +6,7 @@
 #include "net/NetworkManager.h"
 #include "animation/AnimClock.h"
 #include "config/Config.h"
-#include "config/Mqtt.h"
+#include "config/Credentials.h"
 
 #if defined(DEVICE_ID_ESP32_WALL)
   #define LED_CHIPSET WS2811
@@ -38,19 +38,21 @@ static inline void addStrip(CRGB* leds, int count) {
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-MqttLight mqttLight(mqttClient, MQTT_USER, MQTT_PASSWORD);
+// The pointers are fixed now; loadCredentials() fills them in setup().
+MqttLight mqttLight(mqttClient, credentials.mqttUser, credentials.mqttPassword);
 
 void setup() {
   Serial.begin(115200);
   delay(2000);
 
+  loadCredentials();
   NetworkManager::connect();
   // Shared clock so animations line up across boards (SNTP retries if
   // WiFi isn't up yet).
   AnimClock::begin();
 
   ArduinoOTA.setHostname(MQTT_CLIENT_ID);
-  ArduinoOTA.setPassword(OTA_PASSWORD);
+  ArduinoOTA.setPassword(credentials.otaPassword);
   ArduinoOTA.onStart([]() {
     // blank the strips: RMT interrupts during a show() could disturb the transfer
     FastLED.clear();
@@ -63,7 +65,12 @@ void setup() {
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("OTA error[%u]\n", error);
   });
-  ArduinoOTA.begin();
+  // Never listen for uploads without a password (an unprovisioned board).
+  if (credentials.otaPassword[0]) {
+    ArduinoOTA.begin();
+  } else {
+    Serial.println("No OTA password stored; OTA uploads disabled");
+  }
 
   static LEDController ledController;
 
@@ -99,7 +106,7 @@ void setup() {
   // (PubSubClient, default 15s, broker up but unresponsive). Keep both short.
   espClient.setTimeout(1);         // seconds
   mqttClient.setSocketTimeout(2);  // seconds
-  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+  mqttClient.setServer(credentials.mqttServer, credentials.mqttPort);
 
   mqttLight.setController(&ledController);
   mqttLight.begin();

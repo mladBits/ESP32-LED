@@ -49,21 +49,9 @@ jobs:
             .pio/libdeps
           key: pio-${{ runner.os }}-${{ matrix.env }}-${{ hashFiles('platformio.ini') }}
       - run: pip install platformio==6.2.0
-      # The real headers are gitignored (WiFi/MQTT/OTA secrets). Placeholders
-      # defining the same macros let the firmware compile; CI never flashes.
-      - name: Create placeholder credential headers
-        run: |
-          cat > src/config/WifiCreds.h <<'EOF'
-          #pragma once
-          #define WIFI_SSID     "ci-placeholder"
-          #define WIFI_PASSWORD "ci-placeholder"
-          #define OTA_PASSWORD  "ci-placeholder"
-          EOF
-          cat > src/config/Mqtt.h <<'EOF'
-          #pragma once
-          #define MQTT_SERVER   "127.0.0.1"
-          #define MQTT_PORT     1883
-          #define MQTT_USER     "ci-placeholder"
-          #define MQTT_PASSWORD "ci-placeholder"
-          EOF
+      # No credential headers here (they're gitignored): this is a release-style
+      # build that reads WiFi/MQTT/OTA settings from the board's NVS storage, so
+      # it also checks that the firmware builds without any secrets.
+      - name: Check no credential headers are present
+        run: test ! -e src/config/WifiCreds.h && test ! -e src/config/Mqtt.h
       - run: pio run -e ${{ matrix.env }}
