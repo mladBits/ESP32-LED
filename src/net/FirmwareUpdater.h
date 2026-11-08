@@ -32,7 +32,7 @@ void loop();
 void armProbation();
 bool onProbationAtBoot();   // this boot started on probation (rollback is armed)
 bool rolledBack();          // the previous update failed its health check and was undone
-const char* bootOtaState(); // the running slot's OTA state at boot, for diagnostics
+const char* otaState();     // the running slot's OTA state now ("valid" once confirmed), for diagnostics
 
 // Fetches the latest release's manifest and verifies this board's entry.
 bool fetchLatest(Release& out, String& error);

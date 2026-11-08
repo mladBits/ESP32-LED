@@ -244,9 +244,10 @@ void MqttLight::publishTelemetry() {
     doc["creds_stored"] = credentials.stored;
     // true = this boot started on probation: it is a newly installed image
     // that rolls back unless it reaches MQTT. ota_state is the running
-    // slot's state at boot ("pending" = the bootloader handles rollback).
+    // slot's state now: "pending" while on the bootloader's probation,
+    // "valid" once confirmed.
     doc["rollback_armed"] = FirmwareUpdater::onProbationAtBoot();
-    doc["ota_state"]      = FirmwareUpdater::bootOtaState();
+    doc["ota_state"]      = FirmwareUpdater::otaState();
 
     char buffer[320];
     serializeJson(doc, buffer, sizeof(buffer));

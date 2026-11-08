@@ -123,7 +123,13 @@ void FirmwareUpdater::begin() {
     Preferences prefs;
     prefs.begin(NVS_NAMESPACE, false);
     lastRolledBack = esp_ota_get_last_invalid_partition() != nullptr || prefs.getBool("rolled_back", false);
-    const bool appProbation = prefs.getBool("probation", false);
+    bool appProbation = prefs.getBool("probation", false);
+    if (appProbation && prefs.getString("prev", "") == esp_ota_get_running_partition()->label) {
+        // This is the image that armed probation: the new one never took
+        // over, or the bootloader already rolled it back.
+        prefs.putBool("probation", false);
+        appProbation = false;
+    }
 
     if (bootStateKnown && bootState == ESP_OTA_IMG_PENDING_VERIFY) {
         probation = Probation::Bootloader;
@@ -184,9 +190,10 @@ bool FirmwareUpdater::onProbationAtBoot() { return probationAtBoot; }
 
 bool FirmwareUpdater::rolledBack() { return lastRolledBack; }
 
-const char* FirmwareUpdater::bootOtaState() {
-    if (!bootStateKnown) return "unknown";
-    switch (bootState) {
+const char* FirmwareUpdater::otaState() {
+    esp_ota_img_states_t state;
+    if (esp_ota_get_state_partition(esp_ota_get_running_partition(), &state) != ESP_OK) return "unknown";
+    switch (state) {
         case ESP_OTA_IMG_NEW:            return "new";
         case ESP_OTA_IMG_PENDING_VERIFY: return "pending";
         case ESP_OTA_IMG_VALID:          return "valid";
