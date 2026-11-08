@@ -15,6 +15,21 @@ constexpr uint8_t STATE_VERSION = 1;
 // Save this long after the last change: a dragged brightness slider becomes
 // one flash write, not dozens.
 constexpr uint32_t STATE_SAVE_DELAY_MS = 5000;
+
+const char* resetReasonName() {
+    switch (esp_reset_reason()) {
+        case ESP_RST_POWERON:   return "power_on";
+        case ESP_RST_SW:        return "software";      // OTA, install, restart()
+        case ESP_RST_PANIC:     return "crash";
+        case ESP_RST_INT_WDT:
+        case ESP_RST_TASK_WDT:
+        case ESP_RST_WDT:       return "watchdog";
+        case ESP_RST_BROWNOUT:  return "brownout";
+        case ESP_RST_EXT:       return "reset_pin";
+        case ESP_RST_DEEPSLEEP: return "deep_sleep";
+        default:                return "other";
+    }
+}
 }  // namespace
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
@@ -262,8 +277,9 @@ void MqttLight::publishTelemetry() {
     // "valid" once confirmed.
     doc["rollback_armed"] = FirmwareUpdater::onProbationAtBoot();
     doc["ota_state"]      = FirmwareUpdater::otaState();
+    doc["reset_reason"]   = resetReasonName();
 
-    char buffer[320];
+    char buffer[384];
     serializeJson(doc, buffer, sizeof(buffer));
     client.publish(TELEMETRY_TOPIC, buffer);
 }
@@ -583,13 +599,18 @@ void MqttLight::restoreState() {
     }
 
     if (s.brightness) lastOnBrightness = s.brightness;
-    if (s.on) {
+    // After a brownout reset, come back off rather than straight back into
+    // the load that may have caused it (avoids a reset loop). Everything else
+    // is restored, so turning it on from HA resumes the saved look.
+    const bool afterBrownout = esp_reset_reason() == ESP_RST_BROWNOUT;
+    if (s.on && !afterBrownout) {
         ledController->isOn = true;
         targetBrightness = brightness = lastOnBrightness;
         poweringOn = true;
         powerOnStartMs = millis();
     }
-    Serial.printf("Restored light state: %s, %s, palette %s\n", s.on ? "on" : "off",
+    Serial.printf("Restored light state: %s, %s, palette %s\n",
+                  s.on ? (afterBrownout ? "on (kept off after a brownout)" : "on") : "off",
                   s.animated ? s.effect : "solid colour", currentPaletteName.c_str());
 }
 

@@ -101,6 +101,13 @@ void setup() {
   FastLED.setMaxPowerInVoltsAndMilliamps(LED_VOLTS, 4500);
 #elif defined(DEVICE_ID_ESP32_WALL)
   FastLED.setMaxPowerInVoltsAndMilliamps(LED_VOLTS, 4000);
+#elif defined(DEVICE_ID_ESP32_DESK)
+  // The supply is labelled 5V/10A, but full white at brightness ~150 (~2.7A
+  // by FastLED's estimate, ~3.5A real) froze the ESP32: the old no-name supply
+  // most likely sags under that load. Capped well below it; FastLED dims
+  // bright scenes to fit. After replacing the supply with a reputable one,
+  // raise this to ~70% of its rating.
+  FastLED.setMaxPowerInVoltsAndMilliamps(LED_VOLTS, 2000);
 #else
   FastLED.setMaxPowerInVoltsAndMilliamps(LED_VOLTS, 9000);
 #endif
