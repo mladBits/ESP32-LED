@@ -27,16 +27,18 @@ constexpr uint8_t MAX_PROBATION_BOOTS = 3;
 // Arduino core hook: returning true stops the core confirming a newly
 // installed image at boot, leaving it pending verification until
 // markHealthy(). With a rollback-capable bootloader, a reset before then
-// boots the previous image instead.
-bool verifyRollbackLater() { return true; }
+// boots the previous image instead. extern "C": the core's weak default is
+// defined in C and declared in no header, so a C++ definition wouldn't
+// replace it.
+extern "C" bool verifyRollbackLater() { return true; }
 
 namespace {
 
 // Two ways an image can be on probation:
 //  - Bootloader: the bootloader supports rollback and marked the image
 //    pending verification;
-//  - App: the bootloader doesn't (it predates rollback support and is only
-//    replaced by a USB flash), so the firmware that installed the image
+//  - App: fallback for a bootloader without rollback support (it is only
+//    replaced by a USB flash): the firmware that installed the image
 //    recorded the slot it left in NVS, and this firmware switches back to it.
 enum class Probation { None, Bootloader, App };
 Probation probation = Probation::None;
