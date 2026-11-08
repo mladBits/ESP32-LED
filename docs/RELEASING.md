@@ -4,7 +4,7 @@ A release is a set of signed firmware images on GitHub that the boards install t
 
 ## Setup (once per PC, e.g. after a reinstall)
 
-All commands use PlatformIO's Python: `%USERPROFILE%\.platformio\penv\Scripts\python` on Windows, `~/.platformio/penv/bin/python` elsewhere. Below it's written as `python`.
+All commands use PlatformIO's Python, written below as `python`. A bare `python` on Windows is usually the Microsoft Store placeholder ("Python was not found"), so type the full path: `~/.platformio/penv/Scripts/python.exe` in Git Bash or Claude Code (`! ~/.platformio/penv/Scripts/python.exe scripts/release.py …`), `%USERPROFILE%\.platformio\penv\Scripts\python` in cmd, `~/.platformio/penv/bin/python` elsewhere.
 
 1. **PlatformIO** installed (it provides that Python).
 2. **`cryptography`** in PlatformIO's Python: `python -m pip install cryptography`. A PlatformIO upgrade can reset that environment; the script then says so and prints this command.
