@@ -44,11 +44,12 @@ MqttLight mqttLight(mqttClient, credentials.mqttUser, credentials.mqttPassword);
 
 void setup() {
   Serial.begin(115200);
+  // First, so a new image that crashes during setup is still counted (and
+  // rolled back after repeated reboots). See FirmwareUpdater.h.
+  FirmwareUpdater::begin();
   delay(2000);
 
   loadCredentials();
-  // Puts a newly installed image on probation (see FirmwareUpdater.h).
-  FirmwareUpdater::begin();
   NetworkManager::connect();
   // Shared clock so animations line up across boards (SNTP retries if
   // WiFi isn't up yet).
@@ -65,6 +66,8 @@ void setup() {
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     Serial.printf("OTA progress: %u%%\r", (progress * 100) / total);
   });
+  // A PC upload gets the same probation as a release install.
+  ArduinoOTA.onEnd([]() { FirmwareUpdater::armProbation(); });
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("OTA error[%u]\n", error);
   });

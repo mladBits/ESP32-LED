@@ -242,11 +242,13 @@ void MqttLight::publishTelemetry() {
     // true = NVS holds a complete set of credentials, so a header-free
     // (release) build would boot and connect on this board.
     doc["creds_stored"] = credentials.stored;
-    // true = this boot started on probation, i.e. the bootloader's rollback
-    // is active for newly installed firmware.
+    // true = this boot started on probation: it is a newly installed image
+    // that rolls back unless it reaches MQTT. ota_state is the running
+    // slot's state at boot ("pending" = the bootloader handles rollback).
     doc["rollback_armed"] = FirmwareUpdater::onProbationAtBoot();
+    doc["ota_state"]      = FirmwareUpdater::bootOtaState();
 
-    char buffer[256];
+    char buffer[320];
     serializeJson(doc, buffer, sizeof(buffer));
     client.publish(TELEMETRY_TOPIC, buffer);
 }

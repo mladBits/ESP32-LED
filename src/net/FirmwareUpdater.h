@@ -20,14 +20,19 @@ struct Release {
 };
 
 // Rollback guard. A new image boots "on probation": markHealthy() confirms it
-// once MQTT is connected; if that hasn't happened within the timeout, or the
-// board resets first, the bootloader returns to the previous image.
-// Call begin() early in setup() and loop() every tick.
+// once MQTT is connected; if that hasn't happened within the timeout, or it
+// keeps rebooting, the board returns to the image that ran before it. Uses
+// the bootloader's rollback where available, else switches slots itself.
+// Call begin() first thing in setup() and loop() every tick.
 void begin();
 void markHealthy();
 void loop();
+// Call right after activating a newly written image (before rebooting into
+// it), whether it came from a release or a PC upload.
+void armProbation();
 bool onProbationAtBoot();   // this boot started on probation (rollback is armed)
 bool rolledBack();          // the previous update failed its health check and was undone
+const char* bootOtaState(); // the running slot's OTA state at boot, for diagnostics
 
 // Fetches the latest release's manifest and verifies this board's entry.
 bool fetchLatest(Release& out, String& error);
