@@ -15,11 +15,6 @@
 #define MQTT_UNIQUE_ID  "esp32_led_7"
 #define MQTT_NAME       "ESP32 Wall LED"
 
-#elif defined(DEVICE_ID_ESP32_TEST)
-#define MQTT_CLIENT_ID  "esp32_test_led"
-#define MQTT_UNIQUE_ID  "esp32_test_led_66"
-#define MQTT_NAME       "ESP32 Test LED 66"
-
 #endif
 
 // `git describe` of the build, injected by scripts/fw_version.py.

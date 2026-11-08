@@ -25,8 +25,6 @@ CRGB leds2[NUM_LEDS_2];
 CRGB leds0[NUM_LEDS_0];
 #elif defined(DEVICE_ID_ESP32_WALL)
 CRGB leds0[NUM_LEDS_0];
-#elif defined(DEVICE_ID_ESP32_TEST)
-CRGB leds0[NUM_LEDS_0];
 #else
 #error "Unknown device environment"
 #endif
@@ -89,7 +87,7 @@ void setup() {
     ledController.addStrip(leds0, NUM_LEDS_0);
     ledController.addStrip(leds1, NUM_LEDS_1);
     ledController.addStrip(leds2, NUM_LEDS_2);
-#elif defined(DEVICE_ID_ESP32_DESK) || defined(DEVICE_ID_ESP32_WALL) || defined(DEVICE_ID_ESP32_TEST)
+#elif defined(DEVICE_ID_ESP32_DESK) || defined(DEVICE_ID_ESP32_WALL)
     addStrip<LED_PIN_0>(leds0, NUM_LEDS_0);
     ledController.addStrip(leds0, NUM_LEDS_0);
 #endif
