@@ -91,6 +91,23 @@ pio run -e desk_esp32_ota -t upload
 - The LEDs blank during the transfer and the device reboots into the new firmware.
 - OTA stays responsive even while the MQTT broker is unreachable (reconnect attempts are rate-limited and time out within a few seconds).
 
+### Signed releases
+
+Releases are built and signed on the PC, never by CI, so the signing key never touches GitHub. Run the script with PlatformIO's Python (`%USERPROFILE%\.platformio\penv\Scripts\python` on Windows, `~/.platformio/penv/bin/python` elsewhere):
+
+```bash
+python -m pip install cryptography          # once, into PlatformIO's Python
+python scripts/release.py keygen            # once: creates the signing key
+
+python scripts/release.py release v1.2.0 --dry-run   # build + sign, publish nothing
+python scripts/release.py release v1.2.0             # publish (main, pushed, CI green)
+python scripts/release.py verify v1.2.0              # check what's on GitHub
+```
+
+- Images come from a clean checkout without the credential headers, so they contain no secrets; the script also scans each one for your local secret values and refuses to release if any appear.
+- Each board's image is signed (ECDSA P-256) over its board, version, size and SHA-256, listed in the release's `manifest.json`. Boards check the signature, board and version before installing, so a release can't be forged without the key, installed on the wrong board, or replayed as another version.
+- The private key is `~/.esp32-led/release-signing-key.pem` (keep a backup); its public half is committed as `src/config/ReleaseKey.h`.
+
 ## Testing
 
 Pure-logic code (color conversion, hue interpolation, command parsing, animation clock math) is covered by

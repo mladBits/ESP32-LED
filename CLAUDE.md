@@ -24,6 +24,8 @@ Unit tests run on the host (no hardware): `pio test -e native`. They cover only 
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push: the native tests, plus a build of each board env on Linux (so filename case matters) **without** the credential headers, i.e. a release-style, secret-free build. **Adding a board means adding it to the workflow's matrix too.**
 
+Releases come from [scripts/release.py](scripts/release.py), run on the PC with PlatformIO's Python (+ `cryptography`), never in CI: the ECDSA P-256 private key stays at `~/.esp32-led/release-signing-key.pem` (backup in Proton Drive `backup\esp32-led\`), its public half is [src/config/ReleaseKey.h](src/config/ReleaseKey.h). It builds every board from a clean header-free checkout at an annotated `vX.Y.Z` tag, signs `board/version/size/sha256` per image (the exact message format is in the script's docstring; firmware verification must reproduce it byte for byte), and publishes the images plus `manifest.json` as a GitHub Release. Its `BOARDS` map (env → `MQTT_CLIENT_ID`) needs a new board too. Always `--dry-run` first.
+
 ## Credentials (local headers → board NVS)
 
 WiFi, MQTT and OTA settings live in each board's NVS storage ([src/config/Credentials.cpp](src/config/Credentials.cpp), `Preferences` namespace `creds`), which survives reboots and firmware updates. Two `.gitignore`d headers are their master copy — never commit them:
