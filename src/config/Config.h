@@ -26,3 +26,6 @@
 #ifndef FW_VERSION
 #define FW_VERSION "unknown"
 #endif
+
+// Where signed releases are published (scripts/release.py) and fetched from.
+#define RELEASES_URL "https://github.com/mladBits/ESP32-LED/releases"

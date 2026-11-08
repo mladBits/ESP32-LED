@@ -1,6 +1,14 @@
+#pragma once
+
 #include "config/Config.h"
 
 #define LIGHT_CONFIG_TOPIC "homeassistant/light/" MQTT_CLIENT_ID
+
+// Firmware updates: the HA `update` entity's state (retained JSON) and the
+// command topic it sends "install" to ("check" re-checks for a release now).
+#define UPDATE_STATE_TOPIC   LIGHT_CONFIG_TOPIC "/update/state"
+#define UPDATE_COMMAND_TOPIC LIGHT_CONFIG_TOPIC "/update/command"
+#define UPDATE_CONFIG_TOPIC  "homeassistant/update/" MQTT_UNIQUE_ID "_firmware/config"
 
 #define STATE_TOPIC        LIGHT_CONFIG_TOPIC "/state"
 #define SET_TOPIC          LIGHT_CONFIG_TOPIC "/set"

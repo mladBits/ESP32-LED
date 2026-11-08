@@ -10,6 +10,7 @@
 #include "animation/AnimationRegistry.h"
 #include "led/LEDController.h"
 #include "led/PaletteManager.h"
+#include "mqtt/UpdateEntity.h"
 
 
 class MqttLight {
@@ -26,7 +27,8 @@ class MqttLight {
         AnimationRegistry ar;
 
         PubSubClient& client;
-        
+        UpdateEntity updates;   // HA firmware update entity (signed releases)
+
         const char* mqttUser;
         const char* mqttPass;
  
@@ -92,7 +94,6 @@ class MqttLight {
         void publishState();
         void publishTelemetry();
         void publishDeviceConfig();
-        void addDeviceInfo(JsonDocument& doc);
         void publishPaletteList();
         void publishPaletteSelectConfig();
         void publishPaletteState();

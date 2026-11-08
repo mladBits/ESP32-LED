@@ -7,6 +7,7 @@
 #include "animation/AnimClock.h"
 #include "config/Config.h"
 #include "config/Credentials.h"
+#include "net/FirmwareUpdater.h"
 
 #if defined(DEVICE_ID_ESP32_WALL)
   #define LED_CHIPSET WS2811
@@ -46,6 +47,8 @@ void setup() {
   delay(2000);
 
   loadCredentials();
+  // Puts a newly installed image on probation (see FirmwareUpdater.h).
+  FirmwareUpdater::begin();
   NetworkManager::connect();
   // Shared clock so animations line up across boards (SNTP retries if
   // WiFi isn't up yet).
@@ -117,6 +120,7 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+  FirmwareUpdater::loop();
   NetworkManager::ensureConnected();
   mqttLight.loop();
 }

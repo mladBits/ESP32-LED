@@ -4,9 +4,11 @@
 #include "animation/AnimClock.h"
 #include "config/Credentials.h"
 #include "led/ColorMath.h"
+#include "mqtt/HaDevice.h"
+#include "net/FirmwareUpdater.h"
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
-: client(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
+: client(clientRef), updates(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
 }
 
 void MqttLight::begin() {
@@ -18,6 +20,7 @@ void MqttLight::begin() {
 void MqttLight::loop() {
     if (!client.connected()) reconnect();
     client.loop();
+    updates.loop();   // release checks; installs block here and reboot
 
     const uint32_t tnow = millis();
     if (client.connected() && tnow - lastTelemetryMs >= telemetryIntervalMs) {
@@ -176,25 +179,11 @@ void MqttLight::publishDeviceConfig() {
        effectList.add(animations[i]->getName());
     }
 
-    addDeviceInfo(doc);
+    addHaDeviceInfo(doc);
 
     String payload;
     serializeJson(doc, payload);
     client.publish(CONFIG_TOPIC, payload.c_str(), true);
-}
-
-// Device block shared by every entity, grouping them under one HA device that
-// shows the running firmware version, plus the origin HA logs for discovery.
-void MqttLight::addDeviceInfo(JsonDocument& doc) {
-    JsonObject device = doc["device"].to<JsonObject>();
-    JsonArray ids = device["identifiers"].to<JsonArray>();
-    ids.add(MQTT_UNIQUE_ID);
-    device["name"]       = MQTT_NAME;
-    device["sw_version"] = FW_VERSION;
-
-    JsonObject origin = doc["origin"].to<JsonObject>();
-    origin["name"]       = "ESP32-LED";
-    origin["sw_version"] = FW_VERSION;
 }
 
 // Advertises palettes as a Home Assistant `select` entity so they can be
@@ -216,7 +205,7 @@ void MqttLight::publishPaletteSelectConfig() {
     // active; picking it from HA matches no named palette and does nothing.
     options.add("Custom");
 
-    addDeviceInfo(doc);
+    addHaDeviceInfo(doc);
 
     String payload;
     serializeJson(doc, payload);
@@ -253,6 +242,9 @@ void MqttLight::publishTelemetry() {
     // true = NVS holds a complete set of credentials, so a header-free
     // (release) build would boot and connect on this board.
     doc["creds_stored"] = credentials.stored;
+    // true = this boot started on probation, i.e. the bootloader's rollback
+    // is active for newly installed firmware.
+    doc["rollback_armed"] = FirmwareUpdater::onProbationAtBoot();
 
     char buffer[256];
     serializeJson(doc, buffer, sizeof(buffer));
@@ -291,10 +283,16 @@ void MqttLight::reconnect() {
         Serial.println(PALETTE_DATA_TOPIC);
         client.subscribe(PALETTE_DATA_TOPIC);
 
+        updates.onConnected();
+
         // publish default state.
         publishState();
         publishPaletteState();
         client.publish(AVAILABILITY_TOPIC, "online", true);
+
+        // Reaching the broker is the health check that confirms a newly
+        // installed firmware (else it's rolled back).
+        FirmwareUpdater::markHealthy();
     } else {
         Serial.printf("MQTT connect failed, rc=%d. Retrying in %lus...\n",
                       client.state(), (unsigned long)(reconnectIntervalMs / 1000));
@@ -317,6 +315,7 @@ void logTopicAndPayload(char *topic, byte* payload, unsigned int length) {
 
 void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
     logTopicAndPayload(topic, payload, length);
+    if (updates.handleMessage(topic, payload, length)) return;   // not JSON
 
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, payload, length);
