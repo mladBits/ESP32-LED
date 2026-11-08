@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
+#include <functional>
 #include "net/FirmwareUpdater.h"
 
 // Home Assistant `update` entity for signed GitHub releases. Checks the latest
@@ -16,9 +17,12 @@ public:
     // True if the message was for this entity (call before other handling).
     bool handleMessage(const char* topic, const uint8_t* payload, unsigned int length);
     void loop();
+    // Runs just before an install starts (e.g. to save state before the reboot).
+    void setBeforeInstall(std::function<void()> fn) { beforeInstall = std::move(fn); }
 
 private:
     PubSubClient& client;
+    std::function<void()> beforeInstall;
     FirmwareUpdater::Release latest = {};
     bool     haveLatest = false;
     bool     scheduled = false;

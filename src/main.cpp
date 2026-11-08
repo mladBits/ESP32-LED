@@ -58,6 +58,7 @@ void setup() {
   ArduinoOTA.setHostname(MQTT_CLIENT_ID);
   ArduinoOTA.setPassword(credentials.otaPassword);
   ArduinoOTA.onStart([]() {
+    mqttLight.flushState();   // keep the latest light state across the reboot
     // blank the strips: RMT interrupts during a show() could disturb the transfer
     FastLED.clear();
     FastLED.show();

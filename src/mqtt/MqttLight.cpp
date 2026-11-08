@@ -1,4 +1,5 @@
 #include "MqttLight.h"
+#include <Preferences.h>
 #include "MqttTopics.h"
 #include "animation/AnimationDirection.h"
 #include "animation/AnimClock.h"
@@ -6,6 +7,15 @@
 #include "led/ColorMath.h"
 #include "mqtt/HaDevice.h"
 #include "net/FirmwareUpdater.h"
+
+namespace {
+constexpr const char* STATE_NAMESPACE = "lightstate";
+constexpr const char* STATE_KEY = "state";
+constexpr uint8_t STATE_VERSION = 1;
+// Save this long after the last change: a dragged brightness slider becomes
+// one flash write, not dozens.
+constexpr uint32_t STATE_SAVE_DELAY_MS = 5000;
+}  // namespace
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
 : client(clientRef), updates(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
@@ -15,6 +25,8 @@ void MqttLight::begin() {
     client.setCallback([this](char* topic, byte* payload, unsigned int length) {
         this->callback(topic, payload, length);
     });
+    updates.setBeforeInstall([this] { flushState(); });
+    restoreState();
 }
 
 void MqttLight::loop() {
@@ -27,6 +39,8 @@ void MqttLight::loop() {
         lastTelemetryMs = tnow;
         publishTelemetry();
     }
+
+    saveStateIfDue(false);
 
     // Power-down collapse owns the strips until it finishes, then hands off to
     // the normal blacked-out idle below.
@@ -379,7 +393,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
 
         // if effect direction is adjusted (not supported by home assistant).
         if (doc["effect_dir"].is<const char*>()) {
-            AnimationDirection direction = AnimationDirectionHelper::parse(doc["effect_dir"]);
+            direction = AnimationDirectionHelper::parse(doc["effect_dir"]);
             ledController->updateDirection(direction);
         }
 
@@ -424,6 +438,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             poweringOn = true;
             powerOnStartMs = millis();
         }
+        markStateDirty();
         publishState();
     } else if(strncmp(topic, PALETTE_SET_TOPIC, sizeof(PALETTE_SET_TOPIC)) == 0) {
         if (doc["palette"].is<const char*>()) {
@@ -438,6 +453,7 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             }
             ledController->updatePalette(*targetPalette);
             currentPaletteName = palette;
+            markStateDirty();
             publishPaletteState();
         }
     } else if (strncmp(topic, PALETTE_DATA_TOPIC, sizeof(PALETTE_DATA_TOPIC)) == 0) {
@@ -466,9 +482,115 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             entries[8],  entries[9],  entries[10], entries[11],
             entries[12], entries[13], entries[14], entries[15]
         ));
+        memcpy(customColors, entries, sizeof customColors);
         currentPaletteName = "Custom";
+        markStateDirty();
         publishPaletteState();
     }
+}
+
+void MqttLight::markStateDirty() {
+    stateDirty = true;
+    stateChangedMs = millis();
+}
+
+void MqttLight::flushState() {
+    saveStateIfDue(true);
+}
+
+MqttLight::SavedState MqttLight::captureState() const {
+    SavedState s = {};   // zero-filled, so unused bytes compare equal
+    s.version    = STATE_VERSION;
+    s.on         = ledController && ledController->isOn;
+    s.brightness = lastOnBrightness;
+    s.hue        = hue;
+    s.sat        = sat;
+    s.animated   = effectWanted == EffectMode::ANIMATION && wantedAnimation;
+    s.direction  = (uint8_t)direction;
+    if (s.animated) strlcpy(s.effect, wantedAnimation->getName(), sizeof s.effect);
+    strlcpy(s.palette, currentPaletteName.c_str(), sizeof s.palette);
+    if (currentPaletteName == "Custom") {
+        for (int i = 0; i < 16; i++) {
+            s.custom[3 * i]     = customColors[i].r;
+            s.custom[3 * i + 1] = customColors[i].g;
+            s.custom[3 * i + 2] = customColors[i].b;
+        }
+    }
+    return s;
+}
+
+void MqttLight::saveStateIfDue(bool force) {
+    if (!stateDirty || !ledController) return;
+    if (!force && millis() - stateChangedMs < STATE_SAVE_DELAY_MS) return;
+    stateDirty = false;
+
+    const SavedState s = captureState();
+    if (haveSaved && memcmp(&s, &lastSaved, sizeof s) == 0) return;
+    Preferences prefs;
+    prefs.begin(STATE_NAMESPACE, false);
+    const bool ok = prefs.putBytes(STATE_KEY, &s, sizeof s) == sizeof s;
+    prefs.end();
+    if (ok) {
+        lastSaved = s;
+        haveSaved = true;
+    }
+}
+
+// Puts the light back the way it was saved: palette, direction, colour,
+// effect, and power (coming on with the usual power-on reveal). Runs before
+// MQTT connects, so the lights return even without the broker; the first
+// publishState() after connecting tells HA. Nothing saved yet keeps the
+// defaults (off).
+void MqttLight::restoreState() {
+    SavedState s = {};
+    Preferences prefs;
+    prefs.begin(STATE_NAMESPACE, true);
+    const bool ok = prefs.getBytesLength(STATE_KEY) == sizeof s &&
+                    prefs.getBytes(STATE_KEY, &s, sizeof s) == sizeof s &&
+                    s.version == STATE_VERSION;
+    prefs.end();
+    if (!ok || !ledController) return;
+    lastSaved = s;
+    haveSaved = true;
+    s.effect[sizeof s.effect - 1] = '\0';
+    s.palette[sizeof s.palette - 1] = '\0';
+
+    if (strcmp(s.palette, "Custom") == 0) {
+        CRGBPalette16 palette;
+        for (int i = 0; i < 16; i++) {
+            customColors[i] = CRGB(s.custom[3 * i], s.custom[3 * i + 1], s.custom[3 * i + 2]);
+            palette.entries[i] = customColors[i];
+        }
+        ledController->updatePalette(palette, true);
+        currentPaletteName = "Custom";
+    } else if (const CRGBPalette16* palette = pm.getPaletteByName(s.palette)) {
+        ledController->updatePalette(*palette, true);
+        currentPaletteName = s.palette;
+    }
+
+    direction = s.direction == (uint8_t)Inward ? Inward : Outward;
+    ledController->updateDirection(direction);
+
+    hue = solidHueTo = solidHueCur = solidHueFrom = s.hue;
+    sat = solidSatTo = solidSatCur = solidSatFrom = s.sat;
+
+    if (s.animated) {
+        if (Animation* anim = ar.getByName(s.effect)) {
+            effectWanted = EffectMode::ANIMATION;
+            wantedAnimation = anim;
+            ledController->setAnimation(anim);
+        }
+    }
+
+    if (s.brightness) lastOnBrightness = s.brightness;
+    if (s.on) {
+        ledController->isOn = true;
+        targetBrightness = brightness = lastOnBrightness;
+        poweringOn = true;
+        powerOnStartMs = millis();
+    }
+    Serial.printf("Restored light state: %s, %s, palette %s\n", s.on ? "on" : "off",
+                  s.animated ? s.effect : "solid colour", currentPaletteName.c_str());
 }
 
 void MqttLight::publishState() {

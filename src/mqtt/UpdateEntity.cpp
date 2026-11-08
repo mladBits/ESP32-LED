@@ -92,6 +92,7 @@ void UpdateEntity::install() {
     }
 
     Serial.printf("Installing %s\n", latest.version);
+    if (beforeInstall) beforeInstall();
     FastLED.clear(true);   // strips stay dark while rendering is paused for the download
     publishState(true, 0);
     String error;

@@ -16,12 +16,40 @@
 class MqttLight {
     public:
         MqttLight(PubSubClient& client, const char* mqttUser, const char* mqttPass);
-        void begin();
+        void begin();   // after setController(): also restores the saved light state
         void loop();
         void setController(LEDController* controller);
-    
+        // Saves a pending state change now; call before a deliberate reboot.
+        void flushState();
+
     private:
         enum class EffectMode : uint8_t {SOLID, ANIMATION };
+
+        // The user-visible light state, saved to NVS so it survives reboots,
+        // power cuts and firmware updates. Byte-for-byte compared to skip
+        // redundant writes; bump STATE_VERSION (MqttLight.cpp) if it changes.
+        struct SavedState {
+            uint8_t version;
+            uint8_t on;
+            uint8_t brightness;       // level to come back on at
+            uint8_t hue, sat;         // solid colour
+            uint8_t animated;         // effect mode
+            uint8_t direction;
+            char    effect[24];
+            char    palette[24];
+            uint8_t custom[16 * 3];   // RGB of a custom palette ("Custom")
+        };
+        SavedState lastSaved = {};
+        bool haveSaved = false;
+        bool stateDirty = false;
+        uint32_t stateChangedMs = 0;
+        AnimationDirection direction = Outward;
+        CRGB customColors[16];
+
+        SavedState captureState() const;
+        void restoreState();
+        void markStateDirty();
+        void saveStateIfDue(bool force);
 
         PaletteManager pm;
         AnimationRegistry ar;
