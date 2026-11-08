@@ -13,6 +13,8 @@ pio test -e native
 | `test_color_math`           | Shortest-path hue interpolation around the 0–255 wrap (`src/led/ColorMath.h`) |
 | `test_animation_direction`  | Direction string parsing and defaulting (`src/animation/AnimationDirection.h`) |
 | `test_anim_math`            | Closed-form animation motion vs a frame-by-frame accumulator, incl. across the 2^32 clock wrap (`src/animation/AnimMath.h`) |
+| `test_version`              | Firmware version parsing and which releases count as newer than a running build (`src/net/Version.h`) |
+| `test_release_format`       | The signed release message, byte for byte against `scripts/release.py` for the published v1.0.0 (`src/net/ReleaseFormat.h`) |
 
 Requires a host GCC on `PATH` (e.g. WinLibs MinGW on Windows: `winget install BrechtSanders.WinLibs.POSIX.UCRT`).
 

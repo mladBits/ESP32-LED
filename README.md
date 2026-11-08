@@ -108,6 +108,16 @@ python scripts/release.py verify v1.2.0              # check what's on GitHub
 - Each board's image is signed (ECDSA P-256) over its board, version, size and SHA-256, listed in the release's `manifest.json`. Boards check the signature, board and version before installing, so a release can't be forged without the key, installed on the wrong board, or replayed as another version.
 - The private key is `~/.esp32-led/release-signing-key.pem` (keep a backup); its public half is committed as `src/config/ReleaseKey.h`.
 
+### Updates from Home Assistant
+
+Each board has a **Firmware** update entity (device page, and *Settings → Updates*):
+
+- About 30 s after connecting and every 6 hours, the board fetches the latest release's `manifest.json` from GitHub over HTTPS (certificates checked against the roots in `src/net/RootCAs.h`), verifies its own entry's signature, and offers the release only if it is newer than what it runs. A local build counts as newer than the release it came after, so it is never "updated" backwards. The entity's notes say what the last check or install found.
+- **Install** downloads the image into the spare OTA slot (the LEDs go dark for the 20–40 s it takes), checks its size and SHA-256 against the signed values, and only then switches to it. Anything that doesn't match is discarded and the board keeps running.
+- **Probation:** every newly installed image, from a release or an upload from the PC, must reach the MQTT broker within 10 minutes (and within 3 boots); otherwise the board switches back to the image it ran before and the entity reports the rollback.
+- Publishing `check` to `…/update/command` re-checks immediately; `install` is what HA's button sends.
+- A board picks this up only after running firmware that has it, so the first such firmware goes on with a normal upload from the PC.
+
 ## Testing
 
 Pure-logic code (color conversion, hue interpolation, command parsing, animation clock math) is covered by

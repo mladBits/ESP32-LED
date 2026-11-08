@@ -6,3 +6,6 @@
 
 /src/config/Mqtt.h
 /src/config/WifiCreds.h
+
+# Python bytecode from importing scripts/*.py
+__pycache__/
