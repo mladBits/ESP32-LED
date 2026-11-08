@@ -24,10 +24,12 @@ void ColorWave::colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) co
 
     uint8_t hue8 = hue16 / 256;
     uint16_t h16_128 = hue16 >> 7;
+    // Fold into a full 0..255..0 sweep (the original demo's `h16_128 >> 1`
+    // only reached 127, so it showed just the first half of each palette).
     if (h16_128 & 0x100) {
-      hue8 = 255 - (h16_128 >> 1);
+      hue8 = 255 - (h16_128 & 0xFF);
     } else {
-      hue8 = h16_128 >> 1;
+      hue8 = h16_128 & 0xFF;
     }
 
     brightnesstheta16 += brightnessthetainc16;
@@ -66,10 +68,12 @@ void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudoti
     hue16 += hueinc16;
     uint8_t hue8 = hue16 / 256;
     uint16_t h16_128 = hue16 >> 7;
+    // Fold into a full 0..255..0 sweep (the original demo's `h16_128 >> 1`
+    // only reached 127, so it showed just the first half of each palette).
     if (h16_128 & 0x100) {
-      hue8 = 255 - (h16_128 >> 1);
+      hue8 = 255 - (h16_128 & 0xFF);
     } else {
-      hue8 = h16_128 >> 1;
+      hue8 = h16_128 & 0xFF;
     }
 
     brightnesstheta16 += brightnessthetainc16;
