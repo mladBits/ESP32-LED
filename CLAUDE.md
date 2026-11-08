@@ -48,6 +48,7 @@ The control flow is a one-directional pipeline: **MQTT message → `MqttLight` (
   - Solid color changes **interpolate** hue (shortest path around the 255-wrap circle) and saturation over `solidBlendDurationMs` (~1s).
   - `callback()` parses HA JSON commands on `SET_TOPIC` (state/brightness/color/effect/`effect_dir`) and palette selections on `PALETTE_SET_TOPIC`.
   - On (re)connect it publishes HA discovery config (`publishDeviceConfig`) and the palette list, then subscribes.
+  - **State persistence:** the user-visible state (`SavedState` in [MqttLight.h](src/mqtt/MqttLight.h): on/off, brightness, hue/sat, effect, direction, palette name and a custom palette's 16 colors) is saved to NVS (`lightstate` namespace) ~5 s after `markStateDirty()`, only when its bytes changed, and restored in `begin()` before MQTT. Any new user-facing setting must be added there (and to `captureState()`/`restoreState()`, bumping `STATE_VERSION` when the layout changes); call `markStateDirty()` wherever it changes. `flushState()` runs before deliberate reboots (ArduinoOTA `onStart`, HA installs).
 
 - **[src/led/LEDController.cpp](src/led/LEDController.cpp)** — thin fan-out layer. Holds up to `MAX_STRIPS` (8) `Strip`s and applies every operation (clear, fill solid, animate, set palette/direction) across all of them. Stateless beyond the strip array + `isOn`.
 

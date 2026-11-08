@@ -178,7 +178,7 @@ Pushes a raw palette directly to the device — exactly 16 hex colors:
 ```
 - The palette is applied immediately with the usual smooth blend; malformed payloads (wrong count, bad hex) are rejected whole.
 - The HA Palette select shows **`Custom`** while one is active (selecting `Custom` manually does nothing).
-- **Nothing is persisted** — the palette lives in RAM and a reboot returns to the default. Publish non-retained.
+- The palette is saved with the rest of the light's state, so it survives reboots and updates (see [Notes](#notes)). Publish non-retained.
 
 This is the integration point for AI-generated palettes: a companion **palette-ai** service (in the homelab repo, deployed next to the MQTT broker) listens on `…/palette/generate` for `{ "prompt": "deep ocean bioluminescence" }`, asks an LLM for a matching 16-color palette, caches the result on the broker host, and publishes it here. The device itself stays dumb — anything that can publish 16 colors can drive this topic.
 
@@ -202,6 +202,7 @@ All effects are driven by a shared clock synced over NTP, so the same effect on 
 The full, current list is whatever the device publishes to `…/palette/list`.
 
 ## Notes
+- The light's state (on/off, brightness, color, effect, direction, and palette, including a custom one's colors) is saved on the board about 5 s after a change and restored at boot, so lights come back as they were after a power cut, reboot or firmware update — even before MQTT reconnects.
 - Brightness is applied globally via FastLED, not as the color's value channel, so colors stay true across brightness levels.
 - Animations follow a clock synced over NTP (`pool.ntp.org` by default; build with `-DNTP_SERVER=\"192.168.x.x\"` to use a LAN time server), so boards running the same effect stay in step to within tens of milliseconds. Until a board first syncs it animates on its own time; the telemetry field `clock_synced` shows which boards have synced.
 - Discovery configs are published retained on every (re)connect. If you change unique IDs or see stale entities, remove the device under the MQTT integration and let it re-announce.
