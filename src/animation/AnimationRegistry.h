@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Animation.h"
-#include "led/PaletteManager.h"
 #include "ColorWave.h"
 #include "Pacifica.h"
 #include "Drift.h"
@@ -10,7 +9,7 @@
 
 class AnimationRegistry {
 public:
-    explicit AnimationRegistry(PaletteManager& pm);
+    AnimationRegistry();
 
     uint8_t getSize() const;
     const Animation* const* list() const;

@@ -2,14 +2,14 @@
 
 [![CI](https://github.com/mladBits/ESP32-LED/actions/workflows/ci.yml/badge.svg)](https://github.com/mladBits/ESP32-LED/actions/workflows/ci.yml)
 
-Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects) plus a `select` entity for color palettes — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI.
+Firmware for ESP32 boards that drive WS2812B / WS2811 addressable LED strips, controlled over **MQTT with Home Assistant auto-discovery**. On boot the device announces itself to Home Assistant as a `light` entity (with effects) — no manual entity configuration required. Set a solid color, run an animation, and pick the palette the animation draws from, all from the Home Assistant UI. Palettes come from the companion **palette-service** (homelab repo), which owns the palette library and adds a **Palette** dropdown to each board's device.
 
 ## Features
 - **Home Assistant MQTT discovery** — the device registers itself automatically; no YAML.
 - **Solid color mode** — full hue/saturation control with smooth color blending.
 - **Animations** — multiple built-in effects, selectable from the light's effect dropdown.
-- **Palettes** — a separate dropdown selects the color palette animations use.
-- **AI-generated palettes** — type a mood into the **Palette prompt** box of the *Palette AI* device in Home Assistant (added by the companion palette-ai service) and an LLM generates a matching palette, applied live over MQTT (see [Custom palette data](#custom-palette-data--palettedata-json)).
+- **Palettes** — the board's **Palette** dropdown selects the color palette animations use. The library lives in palette-service, not the firmware: the board keeps only the palette it's showing (see [Palettes](#palettes)).
+- **AI-generated palettes** — type a mood into the **Palette prompt** box of the *Palettes* device in Home Assistant and an LLM generates a matching palette, applied live over MQTT; **Save AI palette** adds it to the library.
 - **Synced animations** — boards share an NTP-synced clock, so the same effect on several boards moves in step.
 - **Smooth brightness fading** between levels and on/off.
 - **Per-device builds** — one codebase, multiple boards (number of strips, pins, LED counts) selected at compile time.
@@ -138,7 +138,7 @@ src/
 ├── main.cpp          # Entry point: strip allocation, FastLED + MQTT wiring, main loop
 ├── animation/        # Animation interface, implementations, registry, shared NTP clock
 ├── config/           # Per-device identity; credentials (NVS-backed, seeded from gitignored WifiCreds.h / Mqtt.h)
-├── led/              # LEDController (multi-strip fan-out), Strip state, PaletteManager, color math
+├── led/              # LEDController (multi-strip fan-out), Strip state, color math
 ├── mqtt/             # MqttLight (HA discovery, JSON commands, state), topics, HA color conversion
 └── net/              # WiFi connection management
 scripts/              # PlatformIO build helpers (OTA auth injection, firmware version stamp)
@@ -165,24 +165,18 @@ Power, brightness, color, and effect, using the Home Assistant JSON light schema
 
 Sending a `color` switches back to solid-color mode. Current state is published to `…/state`.
 
-### Palette — `…/palette/set1` (JSON)
-```json
-{ "palette": "OceanColors" }
-```
-Home Assistant's auto-generated **Palette** select sends this for you. The available options are published to `…/palette/list`, and the current selection to `…/palette/state`.
-
-### Custom palette data — `…/palette/data` (JSON)
-Pushes a raw palette directly to the device — exactly 16 hex colors:
+### Palette — `…/palette/data` (JSON)
+The palette to show — exactly 16 hex colors and its name:
 ```json
 { "name": "Sunset Dream", "colors": ["#1A0533", "#3B0A56", "…14 more…"] }
 ```
-- The palette is applied immediately with the usual smooth blend; malformed payloads (wrong count, bad hex) are rejected whole.
-- The HA Palette select shows **`Custom`** while one is active (selecting `Custom` manually does nothing).
-- The palette is saved with the rest of the light's state, so it survives reboots and updates (see [Notes](#notes)). Publish non-retained.
+- **palette-service** sends this when a palette is picked in Home Assistant; anything that can publish 16 colors can drive it. Publish non-retained.
+- The palette is applied with the usual smooth blend; malformed payloads (wrong count, bad hex) are rejected whole.
+- The board reports the name back on `…/palette/state` (`{ "palette": "Sunset Dream" }`, retained); without a `name`, or with one over 23 bytes, it shows as `Custom`.
+- The palette (name and colors) is saved with the rest of the light's state, so it survives reboots and updates, and stays while palette-service is down (see [Notes](#notes)).
 
-This is the integration point for AI-generated palettes: a companion **palette-ai** service (in the homelab repo, deployed next to the MQTT broker) listens on `…/palette/generate` for `{ "prompt": "deep ocean bioluminescence" }`, asks an LLM for a matching 16-color palette, caches the result on the broker host, and publishes it here. The device itself stays dumb — anything that can publish 16 colors can drive this topic.
-
-In Home Assistant, palette-ai adds its own **Palette AI** device: a **Palette prompt** box that publishes to `homeassistant/light/all/palette/generate` and routes by what you write ("… for the wall" goes only to the wall; naming no strip goes to every strip), and a **Status** line saying what happened to the last prompt (generating, applied to which strips, or why it failed). The ESP32 never reads the generate topic itself; if palette-ai is down, its entities show as unavailable.
+### Palette announcement — `…/palette/board` (JSON, published by the board)
+On every connect the board publishes, retained, `{ "unique_id": "esp32_led_6", "name": "ESP32 Desk LED", "palette": "Glacier" }`. palette-service discovers boards from it, publishes each board's **Palette** dropdown on the board's own HA device, and resends the current palette's colors (which is how palettes edited in the library reach the boards).
 
 ### Built-in effects
 - `ColorWave` — shifting waves sweeping through the palette.
@@ -194,15 +188,12 @@ In Home Assistant, palette-ai adds its own **Palette AI** device: a **Palette pr
 All effects are driven by a shared clock synced over NTP, so the same effect on several boards moves in step (see [Notes](#notes)).
 
 ### Palettes
-`RainbowColors` (the boot default) plus smooth gradient palettes tuned for the wave effects:
-- Cyberpunk: `NeonArcade`, `Synthwave`, `NeonNoir`, `AcidRain`
-- Moody botanical: `DeepForest`, `Nightshade`, `Lichen`
-- Others: `Aurora`, `DeepSea`, `Firelight`, `CottonCandy`, `Citrus`, `Glacier`
+The firmware has no palette list: palettes live in **palette-service** (homelab repo) — built-in ones in `palette-service/palettes.json` (in git, as 16 colors or gradient stops) plus any saved from Home Assistant. The board knows only `RainbowColors`, its out-of-the-box palette until palette-service sends another. Adding or editing a palette never needs a firmware release; see palette-service's README.
 
-The full, current list is whatever the device publishes to `…/palette/list`.
+If palette-service is down, the dropdowns show as unavailable; boards keep showing (and remembering) their current palette, and everything else works as usual.
 
 ## Notes
-- The light's state (on/off, brightness, color, effect, direction, and palette, including a custom one's colors) is saved on the board about 5 s after a change and restored at boot, so lights come back as they were after a power cut, reboot or firmware update — even before MQTT reconnects.
+- The light's state (on/off, brightness, color, effect, direction, and palette name and colors) is saved on the board about 5 s after a change and restored at boot, so lights come back as they were after a power cut, reboot or firmware update — even before MQTT reconnects.
 - Brightness is applied globally via FastLED, not as the color's value channel, so colors stay true across brightness levels.
 - Animations follow a clock synced over NTP (`pool.ntp.org` by default; build with `-DNTP_SERVER=\"192.168.x.x\"` to use a LAN time server), so boards running the same effect stay in step to within tens of milliseconds. Until a board first syncs it animates on its own time; the telemetry field `clock_synced` shows which boards have synced.
 - Discovery configs are published retained on every (re)connect. If you change unique IDs or see stale entities, remove the device under the MQTT integration and let it re-announce.

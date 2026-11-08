@@ -9,7 +9,6 @@
 #include "animation/Animation.h"
 #include "animation/AnimationRegistry.h"
 #include "led/LEDController.h"
-#include "led/PaletteManager.h"
 #include "mqtt/UpdateEntity.h"
 
 
@@ -36,22 +35,22 @@ class MqttLight {
             uint8_t animated;         // effect mode
             uint8_t direction;
             char    effect[24];
-            char    palette[24];
-            uint8_t custom[16 * 3];   // RGB of a custom palette ("Custom")
+            char    palette[24];      // name, as palette-service sent it
+            uint8_t colors[16 * 3];   // its RGB (version 1: only for "Custom")
         };
         SavedState lastSaved = {};
         bool haveSaved = false;
         bool stateDirty = false;
         uint32_t stateChangedMs = 0;
         AnimationDirection direction = Outward;
-        CRGB customColors[16];
+        // The shown palette's colours (the board keeps no palette library).
+        CRGB paletteColors[16];
 
         SavedState captureState() const;
         void restoreState();
         void markStateDirty();
         void saveStateIfDue(bool force);
 
-        PaletteManager pm;
         AnimationRegistry ar;
 
         PubSubClient& client;
@@ -102,7 +101,7 @@ class MqttLight {
         EffectMode effectWanted = EffectMode::SOLID;
         Animation* wantedAnimation = nullptr;
 
-        // palette selection (defaults to the Strip default, RainbowColors_p)
+        // shown palette's name (defaults to the Strip default, RainbowColors_p)
         String currentPaletteName = "RainbowColors";
 
         // non-blocking reconnect pacing; initialized one interval in the
@@ -122,7 +121,6 @@ class MqttLight {
         void publishState();
         void publishTelemetry();
         void publishDeviceConfig();
-        void publishPaletteList();
-        void publishPaletteSelectConfig();
         void publishPaletteState();
+        void publishPaletteBoard();
 };

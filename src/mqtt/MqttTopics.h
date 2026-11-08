@@ -18,11 +18,14 @@
 // Retained "online"/"offline"; the broker publishes "offline" (our last will)
 // when the connection drops without a clean disconnect.
 #define AVAILABILITY_TOPIC LIGHT_CONFIG_TOPIC "/availability"
-#define PALETTE_SET_TOPIC   LIGHT_CONFIG_TOPIC "/palette/set1"
-#define PALETTE_LIST_TOPIC  LIGHT_CONFIG_TOPIC "/palette/list"
+// Palettes come from palette-service (homelab repo), which owns the palette
+// library and this board's Palette dropdown in HA; the board keeps none.
+// Current palette name, retained: {"palette": "<name>"}.
 #define PALETTE_STATE_TOPIC LIGHT_CONFIG_TOPIC "/palette/state"
-// Raw palette data (16 hex colors) applied directly, never persisted.
+// The palette to show: {"name": "<name>", "colors": ["#RRGGBB" x16]}, sent
+// by palette-service when one is picked (no name shows as "Custom").
 #define PALETTE_DATA_TOPIC  LIGHT_CONFIG_TOPIC "/palette/data"
-
-// Home Assistant MQTT discovery for the palette as a `select` entity.
-#define PALETTE_SELECT_CONFIG_TOPIC "homeassistant/select/" MQTT_UNIQUE_ID "_palette/config"
+// Retained announcement that palette-service discovers boards by:
+// {"unique_id", "name", "palette"}. Republished on every connect, which also
+// makes the service resend the current palette's colours.
+#define PALETTE_BOARD_TOPIC LIGHT_CONFIG_TOPIC "/palette/board"

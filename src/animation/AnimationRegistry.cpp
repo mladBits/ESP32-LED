@@ -1,6 +1,6 @@
 #include "AnimationRegistry.h"
 
-AnimationRegistry::AnimationRegistry(PaletteManager& pm) :
+AnimationRegistry::AnimationRegistry() :
 colorWave(), pacifica(), drift(), lavaLamp(), cityLights(), count(0) {
     animations[count++] = &colorWave;
     animations[count++] = &pacifica;

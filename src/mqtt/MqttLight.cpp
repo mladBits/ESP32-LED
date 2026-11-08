@@ -11,7 +11,9 @@
 namespace {
 constexpr const char* STATE_NAMESPACE = "lightstate";
 constexpr const char* STATE_KEY = "state";
-constexpr uint8_t STATE_VERSION = 1;
+// 2: colours are saved for every palette (1 saved them only for "Custom";
+// named palettes came from a built-in list). Same layout, so 1 still loads.
+constexpr uint8_t STATE_VERSION = 2;
 // Save this long after the last change: a dragged brightness slider becomes
 // one flash write, not dozens.
 constexpr uint32_t STATE_SAVE_DELAY_MS = 5000;
@@ -33,7 +35,9 @@ const char* resetReasonName() {
 }  // namespace
 
 MqttLight::MqttLight(PubSubClient& clientRef, const char* user, const char*pass)
-: client(clientRef), updates(clientRef), mqttUser(user), mqttPass(pass), pm(), ar(pm) {
+: client(clientRef), updates(clientRef), mqttUser(user), mqttPass(pass) {
+    // The strips start on RainbowColors_p (Strip.h); keep the colours in step.
+    for (int i = 0; i < 16; i++) paletteColors[i] = CRGB(RainbowColors_p[i]);
 }
 
 void MqttLight::begin() {
@@ -175,15 +179,6 @@ void MqttLight::setController(LEDController* controller) {
     ledController = controller;
 }
 
-void MqttLight::publishPaletteList() {
-    JsonDocument doc;
-    pm.buildPaletteJson(doc);
-
-    String payload;
-    serializeJson(doc, payload);
-    client.publish(PALETTE_LIST_TOPIC, payload.c_str(), true);
-}
-
 void MqttLight::publishDeviceConfig() {
     JsonDocument doc;
     doc["~"]            = LIGHT_CONFIG_TOPIC;
@@ -215,39 +210,28 @@ void MqttLight::publishDeviceConfig() {
     client.publish(CONFIG_TOPIC, payload.c_str(), true);
 }
 
-// Advertises palettes as a Home Assistant `select` entity so they can be
-// chosen from a dropdown, grouped under the same device as the light.
-void MqttLight::publishPaletteSelectConfig() {
-    JsonDocument doc;
-    doc["name"]             = "Palette";
-    doc["unique_id"]        = MQTT_UNIQUE_ID "_palette";
-    doc["command_topic"]    = PALETTE_SET_TOPIC;
-    // HA `select` publishes the raw option; wrap it into the JSON the callback expects.
-    doc["command_template"] = "{\"palette\": \"{{ value }}\"}";
-    doc["state_topic"]      = PALETTE_STATE_TOPIC;
-    doc["value_template"]   = "{{ value_json.palette }}";
-    doc["availability_topic"] = AVAILABILITY_TOPIC;
-
-    JsonArray options = doc["options"].to<JsonArray>();
-    pm.addPaletteOptions(options);
-    // Shown as state while an AI-generated palette (PALETTE_DATA_TOPIC) is
-    // active; picking it from HA matches no named palette and does nothing.
-    options.add("Custom");
-
-    addHaDeviceInfo(doc);
-
-    String payload;
-    serializeJson(doc, payload);
-    client.publish(PALETTE_SELECT_CONFIG_TOPIC, payload.c_str(), true);
-}
-
 void MqttLight::publishPaletteState() {
     JsonDocument doc;
     doc["palette"] = currentPaletteName;
 
-    char buffer[64];
+    char buffer[96];
     serializeJson(doc, buffer, sizeof(buffer));
     client.publish(PALETTE_STATE_TOPIC, buffer, true);
+}
+
+// Announces the board to palette-service, which owns the palette library and
+// publishes this board's Palette dropdown in HA (on the same device, under
+// the unique_id the board itself used to publish it with). Retained, so the
+// service finds the board after its own restarts.
+void MqttLight::publishPaletteBoard() {
+    JsonDocument doc;
+    doc["unique_id"] = MQTT_UNIQUE_ID;
+    doc["name"]      = MQTT_NAME;
+    doc["palette"]   = currentPaletteName;
+
+    char buffer[160];
+    serializeJson(doc, buffer, sizeof(buffer));
+    client.publish(PALETTE_BOARD_TOPIC, buffer, true);
 }
 
 // Publishes a small JSON telemetry frame for external metrics collection
@@ -301,16 +285,10 @@ void MqttLight::reconnect() {
         Serial.println("Connected to MQTT Broker");
 
         publishDeviceConfig();
-        publishPaletteList();
-        publishPaletteSelectConfig();
 
         Serial.print("Subscribing to ");
         Serial.println(SET_TOPIC);
         client.subscribe(SET_TOPIC);
-
-        Serial.print("Subscribing to ");
-        Serial.println(PALETTE_SET_TOPIC);
-        client.subscribe(PALETTE_SET_TOPIC);
 
         Serial.print("Subscribing to ");
         Serial.println(PALETTE_DATA_TOPIC);
@@ -321,6 +299,9 @@ void MqttLight::reconnect() {
         // publish default state.
         publishState();
         publishPaletteState();
+        // After subscribing to PALETTE_DATA_TOPIC: the service answers with
+        // the current palette's colours.
+        publishPaletteBoard();
         client.publish(AVAILABILITY_TOPIC, "online", true);
 
         // Reaching the broker is the health check that confirms a newly
@@ -456,30 +437,17 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
         }
         markStateDirty();
         publishState();
-    } else if(strncmp(topic, PALETTE_SET_TOPIC, sizeof(PALETTE_SET_TOPIC)) == 0) {
-        if (doc["palette"].is<const char*>()) {
-            const char* palette = doc["palette"];
-            // "Custom" is only ever entered via PALETTE_DATA_TOPIC; selecting it
-            // from HA falls through the lookup below and is a no-op.
-            const CRGBPalette16* targetPalette = pm.getPaletteByName(palette);
-            if (!targetPalette) {
-                Serial.print("Invalid palette: ");
-                Serial.println(palette);
-                return;
-            }
-            ledController->updatePalette(*targetPalette);
-            currentPaletteName = palette;
-            markStateDirty();
-            publishPaletteState();
-        }
     } else if (strncmp(topic, PALETTE_DATA_TOPIC, sizeof(PALETTE_DATA_TOPIC)) == 0) {
-        // Raw palette: exactly 16 "#RRGGBB" entries. Applied directly, never saved —
-        // it lives in strip RAM until replaced or the device reboots.
+        // The palette to show: exactly 16 "#RRGGBB" entries and its name, which
+        // the board reports back as the palette state (no name: "Custom").
         JsonArray colors = doc["colors"].as<JsonArray>();
         if (colors.isNull() || colors.size() != 16) {
             Serial.println("Palette data rejected: need a \"colors\" array of 16 entries");
             return;
         }
+        const char* name = doc["name"] | "Custom";
+        // Too long to save whole: a cut name would match no dropdown option.
+        if (!*name || strlen(name) >= sizeof(SavedState::palette)) name = "Custom";
 
         CRGB entries[16];
         for (int i = 0; i < 16; i++) {
@@ -498,8 +466,8 @@ void MqttLight::callback(char* topic, byte* payload, unsigned int length) {
             entries[8],  entries[9],  entries[10], entries[11],
             entries[12], entries[13], entries[14], entries[15]
         ));
-        memcpy(customColors, entries, sizeof customColors);
-        currentPaletteName = "Custom";
+        memcpy(paletteColors, entries, sizeof paletteColors);
+        currentPaletteName = name;
         markStateDirty();
         publishPaletteState();
     }
@@ -525,12 +493,10 @@ MqttLight::SavedState MqttLight::captureState() const {
     s.direction  = (uint8_t)direction;
     if (s.animated) strlcpy(s.effect, wantedAnimation->getName(), sizeof s.effect);
     strlcpy(s.palette, currentPaletteName.c_str(), sizeof s.palette);
-    if (currentPaletteName == "Custom") {
-        for (int i = 0; i < 16; i++) {
-            s.custom[3 * i]     = customColors[i].r;
-            s.custom[3 * i + 1] = customColors[i].g;
-            s.custom[3 * i + 2] = customColors[i].b;
-        }
+    for (int i = 0; i < 16; i++) {
+        s.colors[3 * i]     = paletteColors[i].r;
+        s.colors[3 * i + 1] = paletteColors[i].g;
+        s.colors[3 * i + 2] = paletteColors[i].b;
     }
     return s;
 }
@@ -563,7 +529,7 @@ void MqttLight::restoreState() {
     prefs.begin(STATE_NAMESPACE, true);
     const bool ok = prefs.getBytesLength(STATE_KEY) == sizeof s &&
                     prefs.getBytes(STATE_KEY, &s, sizeof s) == sizeof s &&
-                    s.version == STATE_VERSION;
+                    (s.version == STATE_VERSION || s.version == 1);
     prefs.end();
     if (!ok || !ledController) return;
     lastSaved = s;
@@ -571,16 +537,18 @@ void MqttLight::restoreState() {
     s.effect[sizeof s.effect - 1] = '\0';
     s.palette[sizeof s.palette - 1] = '\0';
 
-    if (strcmp(s.palette, "Custom") == 0) {
-        CRGBPalette16 palette;
-        for (int i = 0; i < 16; i++) {
-            customColors[i] = CRGB(s.custom[3 * i], s.custom[3 * i + 1], s.custom[3 * i + 2]);
-            palette.entries[i] = customColors[i];
+    if (s.palette[0]) {
+        // Version 1 named palettes came from the old built-in list, so their
+        // colours weren't saved: keep the name and the default colours until
+        // palette-service resends them (it does when the board announces).
+        if (s.version >= 2 || strcmp(s.palette, "Custom") == 0) {
+            CRGBPalette16 palette;
+            for (int i = 0; i < 16; i++) {
+                paletteColors[i] = CRGB(s.colors[3 * i], s.colors[3 * i + 1], s.colors[3 * i + 2]);
+                palette.entries[i] = paletteColors[i];
+            }
+            ledController->updatePalette(palette, true);
         }
-        ledController->updatePalette(palette, true);
-        currentPaletteName = "Custom";
-    } else if (const CRGBPalette16* palette = pm.getPaletteByName(s.palette)) {
-        ledController->updatePalette(*palette, true);
         currentPaletteName = s.palette;
     }
 
