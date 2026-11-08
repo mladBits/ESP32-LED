@@ -21,7 +21,7 @@ All commands use PlatformIO's Python: `%USERPROFILE%\.platformio\penv\Scripts\py
 4. Publish (about 8 minutes, mostly clean builds of every board):
    `python scripts/release.py release v1.2.0`
 5. Check what GitHub serves: `python scripts/release.py verify v1.2.0`
-6. Install. Each board offers the release within 6 hours; publishing `check` to `homeassistant/light/<client id>/update/command` makes it check now. Press **Install** on the board's Firmware entity (*Settings → Updates*). An install takes about 45 s: the LEDs go dark while the image downloads, then the board reboots. Lights come back in their boot state; on/off isn't remembered across reboots.
+6. Install. Each board offers the release within 6 hours; publishing `check` to `homeassistant/light/<client id>/update/command` makes it check now. Press **Install** on the board's Firmware entity (*Settings → Updates*). An install takes about 45 s: the LEDs go dark while the image downloads, then the board reboots and restores its saved light state (on/off, brightness, effect, palette).
 
 ## What the script refuses, and the fix
 
