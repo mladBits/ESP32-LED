@@ -93,6 +93,8 @@ pio run -e desk_esp32_ota -t upload
 
 ### Signed releases
 
+Full runbook (setup on a new PC, troubleshooting, bad releases, key rotation): **[docs/RELEASING.md](docs/RELEASING.md)**.
+
 Releases are built and signed on the PC, never by CI, so the signing key never touches GitHub. Run the script with PlatformIO's Python (`%USERPROFILE%\.platformio\penv\Scripts\python` on Windows, `~/.platformio/penv/bin/python` elsewhere):
 
 ```bash
