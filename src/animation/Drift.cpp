@@ -9,9 +9,10 @@ static uint16_t sBrightThetaInc16;
 
 static void computeParams() {
     const uint32_t tb = AnimClock::timebase();
-    // Narrower hue spread than ColorWave (80–300 vs 300–1500) so palette reads as
-    // soft ribbon sections rather than rapid rainbow cycling. Very slow oscillation.
-    sHueInc16        = beatsin88(30,  80, 300, tb);
+    // Narrow hue spread so the palette reads as soft ribbon sections rather
+    // than rapid cycling. Very slow oscillation. (Halved when the palette walk
+    // became a there-and-back fold, which covers twice the distance per cycle.)
+    sHueInc16        = beatsin88(30,  40, 150, tb);
     // High brightness floor: depth 40–100 means floor stays at 155–215 — never goes dark
     sBrightDepth     = beatsin88(110, 40, 100, tb);
     // Slow brightness wave spacing
@@ -20,7 +21,11 @@ static void computeParams() {
 
 static CRGB samplePalette(const CRGBPalette16& pal, uint16_t& hue16, uint16_t& brightTheta) {
     hue16   += sHueInc16;
-    uint8_t hue8 = hue16 >> 8;
+    // Walk the palette there and back (0..255..0) instead of wrapping: a wrap
+    // jumps straight from the palette's last colour to its first, a visible
+    // seam, since palettes are written one-way (see palette-service's README).
+    const uint16_t h9 = hue16 >> 7;
+    const uint8_t hue8 = (h9 & 0x100) ? 255 - (h9 & 0xFF) : (h9 & 0xFF);
 
     brightTheta += sBrightThetaInc16;
     uint16_t b16  = sin16(brightTheta) + 32768;
@@ -63,11 +68,12 @@ void Drift::driftCenter(Strip& strip, uint16_t hue16, uint16_t brightTheta) cons
 }
 
 void Drift::update(Strip& strip) const {
-    // Pure functions of the shared clock (see AnimClock): ~4x slower than
-    // ColorWave, 1–2 units/ms instead of 5–9.
+    // Pure functions of the shared clock (see AnimClock). The hue drifts at
+    // 0.5–1 units/ms, ~8x slower than ColorWave's 5–9 (half its old 1–2, as the
+    // folded palette walk covers twice the distance per cycle).
     const uint32_t t = AnimClock::now();
     const uint16_t brightTheta = beatsinIntegral16(50,  1 * 256, 2 * 256, t);
-    const uint16_t hue16       = beatsinIntegral16(120, 1 * 256, 2 * 256, t);
+    const uint16_t hue16       = beatsinIntegral16(120, 128, 256, t);
 
     const uint32_t now = millis();
     if (now - strip.paletteLastBlendMs >= 40) {
