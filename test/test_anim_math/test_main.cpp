@@ -41,9 +41,28 @@ void colorWavePhase_tracksAccumulator() {
     tracksAccumulator(147, 23 * 256, 60 * 256, 1700000000u, 24);
 }
 
-// Drift's slow hue: 1..2 units/ms at 120/256 BPM.
+// Drift's slow hue: 0.5..1 units/ms at 120/256 BPM.
 void driftHue_tracksAccumulator() {
-    tracksAccumulator(120, 1 * 256, 2 * 256, 123456789u, 4);
+    tracksAccumulator(120, 128, 256, 123456789u, 4);
+}
+
+// foldPhase covers 0..255 and back, and never jumps: neighbouring phases
+// (including 65535 -> 0) differ by at most one step.
+void foldPhase_isASeamlessTriangle() {
+    TEST_ASSERT_EQUAL_UINT8(0,   foldPhase(0));
+    TEST_ASSERT_EQUAL_UINT8(255, foldPhase(0x7FFF));
+    TEST_ASSERT_EQUAL_UINT8(255, foldPhase(0x8000));
+    TEST_ASSERT_EQUAL_UINT8(0,   foldPhase(0xFFFF));
+    uint8_t lo = 255, hi = 0;
+    for (uint32_t p = 0; p <= 0xFFFF; p++) {
+        const uint8_t v = foldPhase((uint16_t)p);
+        const uint8_t next = foldPhase((uint16_t)(p + 1));   // p = 0xFFFF wraps to 0
+        TEST_ASSERT_INT_WITHIN(1, v, next);
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+    }
+    TEST_ASSERT_EQUAL_UINT8(0, lo);
+    TEST_ASSERT_EQUAL_UINT8(255, hi);
 }
 
 // Pacifica's surge wobble: mean-zero speed, run straight across the 2^32 wrap.
@@ -64,6 +83,7 @@ int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(colorWavePhase_tracksAccumulator);
     RUN_TEST(driftHue_tracksAccumulator);
+    RUN_TEST(foldPhase_isASeamlessTriangle);
     RUN_TEST(wobble_tracksAccumulatorAcrossWrap);
     RUN_TEST(continuousAtClockWrap);
     return UNITY_END();

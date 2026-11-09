@@ -27,3 +27,14 @@ static inline uint16_t beatsinIntegral16(uint16_t bpm88, int32_t lo8, int32_t hi
 
     return (uint16_t)(linear + (int64_t)lroundf(osc));
 }
+
+// A 16-bit phase folded into a triangle: 0 up to 255 and back to 0 over one
+// cycle (at 9-bit resolution). Sample palettes through this instead of letting
+// an 8-bit index wrap: palettes are written one-way, so a wrap jumps straight
+// from the last colour to the first, a visible seam. Continuous everywhere,
+// including across the 65535 -> 0 wrap. Callers still scale8(..., 240) it so
+// the lookup never blends entry 15 back into entry 0.
+static inline uint8_t foldPhase(uint16_t phase) {
+    const uint16_t h = phase >> 7;
+    return (h & 0x100) ? (uint8_t)(255 - (h & 0xFF)) : (uint8_t)(h & 0xFF);
+}

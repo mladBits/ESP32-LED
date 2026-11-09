@@ -22,15 +22,9 @@ void ColorWave::colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) co
   for (int i = strip.numLeds - 1; i >= 0; i--) {
     hue16 += hueinc16;
 
-    uint8_t hue8 = hue16 / 256;
-    uint16_t h16_128 = hue16 >> 7;
-    // Fold into a full 0..255..0 sweep (the original demo's `h16_128 >> 1`
-    // only reached 127, so it showed just the first half of each palette).
-    if (h16_128 & 0x100) {
-      hue8 = 255 - (h16_128 & 0xFF);
-    } else {
-      hue8 = h16_128 & 0xFF;
-    }
+    // Full 0..255..0 sweep (the original demo's fold only reached 127, so it
+    // showed just the first half of each palette).
+    const uint8_t hue8 = foldPhase(hue16);
 
     brightnesstheta16 += brightnessthetainc16;
     uint16_t b16 = sin16(brightnesstheta16) + 32768;
@@ -66,15 +60,9 @@ void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudoti
     if (left < 0 && right >= strip.numLeds) break;
 
     hue16 += hueinc16;
-    uint8_t hue8 = hue16 / 256;
-    uint16_t h16_128 = hue16 >> 7;
-    // Fold into a full 0..255..0 sweep (the original demo's `h16_128 >> 1`
-    // only reached 127, so it showed just the first half of each palette).
-    if (h16_128 & 0x100) {
-      hue8 = 255 - (h16_128 & 0xFF);
-    } else {
-      hue8 = h16_128 & 0xFF;
-    }
+    // Full 0..255..0 sweep (the original demo's fold only reached 127, so it
+    // showed just the first half of each palette).
+    const uint8_t hue8 = foldPhase(hue16);
 
     brightnesstheta16 += brightnessthetainc16;
     uint16_t b16 = sin16(brightnesstheta16) + 32768;
@@ -86,7 +74,8 @@ void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudoti
     CRGB newcolor = ColorFromPalette(strip.currentPalette, index, bri8);
 
     if (left >= 0)  nblend(strip.leds[left], newcolor, 128);
-    if (right < strip.numLeds) nblend(strip.leds[right], newcolor, 128);
+    // At offset 0 left == right: blend the centre LED once, like the rest.
+    if (right < strip.numLeds && right != left) nblend(strip.leds[right], newcolor, 128);
   }
 }
 

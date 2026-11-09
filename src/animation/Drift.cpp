@@ -21,11 +21,8 @@ static void computeParams() {
 
 static CRGB samplePalette(const CRGBPalette16& pal, uint16_t& hue16, uint16_t& brightTheta) {
     hue16   += sHueInc16;
-    // Walk the palette there and back (0..255..0) instead of wrapping: a wrap
-    // jumps straight from the palette's last colour to its first, a visible
-    // seam, since palettes are written one-way (see palette-service's README).
-    const uint16_t h9 = hue16 >> 7;
-    const uint8_t hue8 = (h9 & 0x100) ? 255 - (h9 & 0xFF) : (h9 & 0xFF);
+    // Walk the palette there and back instead of wrapping (see foldPhase).
+    const uint8_t hue8 = foldPhase(hue16);
 
     brightTheta += sBrightThetaInc16;
     uint16_t b16  = sin16(brightTheta) + 32768;
