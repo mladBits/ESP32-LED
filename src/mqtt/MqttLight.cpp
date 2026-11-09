@@ -68,8 +68,7 @@ void MqttLight::loop() {
         return;
     }
 
-    if (brightness < targetBrightness) brightness++;
-    else if (brightness > targetBrightness) brightness--;
+    stepBrightnessRamp();
     
     const bool effectiveOn = (brightness > 0);
 
@@ -132,6 +131,25 @@ void MqttLight::loop() {
     if (poweringOn) stepPowerOnMask();
 
     ledController->show();
+}
+
+// Moves brightness toward targetBrightness one step per BRIGHTNESS_STEP_MS
+// (0..255 in ~1.3 s), on the clock rather than one step per loop, so fades keep
+// their speed whatever the frame rate and catch up after a stall.
+void MqttLight::stepBrightnessRamp() {
+    const uint32_t now = millis();
+    if (brightness == targetBrightness) {
+        lastRampMs = now;
+        return;
+    }
+    uint32_t steps = (now - lastRampMs) / BRIGHTNESS_STEP_MS;
+    if (!steps) return;
+    lastRampMs += steps * BRIGHTNESS_STEP_MS;
+    const uint8_t gap = brightness < targetBrightness ? targetBrightness - brightness
+                                                      : brightness - targetBrightness;
+    if (steps > gap) steps = gap;
+    if (brightness < targetBrightness) brightness += steps;
+    else                               brightness -= steps;
 }
 
 // Drives the one-shot power-down collapse. Runs every tick while shuttingDown

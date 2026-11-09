@@ -16,7 +16,10 @@ struct Strip {
     AnimationDirection direction = Outward;
     const Animation* animation = nullptr; 
 
-    uint32_t paletteLastBlendMs = 0;
+    // Timed crossfade from fromPalette to targetPalette (LEDController).
+    CRGBPalette16 fromPalette = RainbowColors_p;
+    uint32_t paletteFadeStartMs = 0;
+    bool paletteFading = false;
 
     Strip() = default;
 

@@ -46,23 +46,23 @@ void driftHue_tracksAccumulator() {
     tracksAccumulator(120, 128, 256, 123456789u, 4);
 }
 
-// foldPhase covers 0..255 and back, and never jumps: neighbouring phases
-// (including 65535 -> 0) differ by at most one step.
-void foldPhase_isASeamlessTriangle() {
-    TEST_ASSERT_EQUAL_UINT8(0,   foldPhase(0));
-    TEST_ASSERT_EQUAL_UINT8(255, foldPhase(0x7FFF));
-    TEST_ASSERT_EQUAL_UINT8(255, foldPhase(0x8000));
-    TEST_ASSERT_EQUAL_UINT8(0,   foldPhase(0xFFFF));
-    uint8_t lo = 255, hi = 0;
+// foldPhase16 covers 0..65535 and back, and never jumps: neighbouring phases
+// (including 65535 -> 0) differ by at most two.
+void foldPhase16_isASeamlessTriangle() {
+    TEST_ASSERT_EQUAL_UINT16(0,      foldPhase16(0));
+    TEST_ASSERT_EQUAL_UINT16(0xFFFE, foldPhase16(0x7FFF));
+    TEST_ASSERT_EQUAL_UINT16(0xFFFF, foldPhase16(0x8000));
+    TEST_ASSERT_EQUAL_UINT16(1,      foldPhase16(0xFFFF));
+    uint16_t lo = 0xFFFF, hi = 0;
     for (uint32_t p = 0; p <= 0xFFFF; p++) {
-        const uint8_t v = foldPhase((uint16_t)p);
-        const uint8_t next = foldPhase((uint16_t)(p + 1));   // p = 0xFFFF wraps to 0
-        TEST_ASSERT_INT_WITHIN(1, v, next);
+        const uint16_t v = foldPhase16((uint16_t)p);
+        const uint16_t next = foldPhase16((uint16_t)(p + 1));   // p = 0xFFFF wraps to 0
+        TEST_ASSERT_INT_WITHIN(2, v, next);
         if (v < lo) lo = v;
         if (v > hi) hi = v;
     }
-    TEST_ASSERT_EQUAL_UINT8(0, lo);
-    TEST_ASSERT_EQUAL_UINT8(255, hi);
+    TEST_ASSERT_EQUAL_UINT16(0, lo);
+    TEST_ASSERT_EQUAL_UINT16(0xFFFF, hi);
 }
 
 // Pacifica's surge wobble: mean-zero speed, run straight across the 2^32 wrap.
@@ -83,7 +83,7 @@ int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(colorWavePhase_tracksAccumulator);
     RUN_TEST(driftHue_tracksAccumulator);
-    RUN_TEST(foldPhase_isASeamlessTriangle);
+    RUN_TEST(foldPhase16_isASeamlessTriangle);
     RUN_TEST(wobble_tracksAccumulatorAcrossWrap);
     RUN_TEST(continuousAtClockWrap);
     return UNITY_END();

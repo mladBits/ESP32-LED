@@ -7,6 +7,7 @@
 #include "ColorWave.h"
 #include "AnimClock.h"
 #include "AnimMath.h"
+#include "PaletteSample.h"
 
 // This function draws color waves with an ever-changing,
 // widely-varying set of parameters, using a color palette.
@@ -22,9 +23,6 @@ void ColorWave::colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) co
   for (int i = strip.numLeds - 1; i >= 0; i--) {
     hue16 += hueinc16;
 
-    // Full 0..255..0 sweep (the original demo's fold only reached 127, so it
-    // showed just the first half of each palette).
-    const uint8_t hue8 = foldPhase(hue16);
 
     brightnesstheta16 += brightnessthetainc16;
     uint16_t b16 = sin16(brightnesstheta16) + 32768;
@@ -32,8 +30,9 @@ void ColorWave::colorwaves(Strip& strip, uint16_t hue16, uint16_t pseudotime) co
     uint8_t bri8 = (uint32_t)bri16 * brightdepth / 65536;
     bri8 += (255 - brightdepth);
 
-    uint8_t index = scale8(hue8, 240);
-    CRGB newcolor = ColorFromPalette(strip.currentPalette, index, bri8);
+    // The whole palette, there and back (the original demo's fold reached only
+    // half of it), at 16-bit precision.
+    CRGB newcolor = paletteFolded(strip.currentPalette, hue16, bri8);
 
     nblend(strip.leds[i], newcolor, 128);
   }
@@ -60,9 +59,6 @@ void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudoti
     if (left < 0 && right >= strip.numLeds) break;
 
     hue16 += hueinc16;
-    // Full 0..255..0 sweep (the original demo's fold only reached 127, so it
-    // showed just the first half of each palette).
-    const uint8_t hue8 = foldPhase(hue16);
 
     brightnesstheta16 += brightnessthetainc16;
     uint16_t b16 = sin16(brightnesstheta16) + 32768;
@@ -70,8 +66,9 @@ void ColorWave::colorwavesCenter(Strip& strip, uint16_t hue16, uint16_t pseudoti
     uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
     bri8 += (255 - brightdepth);
 
-    uint8_t index = scale8(hue8, 240);
-    CRGB newcolor = ColorFromPalette(strip.currentPalette, index, bri8);
+    // The whole palette, there and back (the original demo's fold reached only
+    // half of it), at 16-bit precision.
+    CRGB newcolor = paletteFolded(strip.currentPalette, hue16, bri8);
 
     if (left >= 0)  nblend(strip.leds[left], newcolor, 128);
     // At offset 0 left == right: blend the centre LED once, like the rest.
@@ -87,12 +84,6 @@ void ColorWave::update(Strip& strip) const {
   const uint32_t t = AnimClock::now();
   const uint16_t pseudotime = beatsinIntegral16(147, 23 * 256, 60 * 256, t);
   const uint16_t hue16      = beatsinIntegral16(400,  5 * 256,  9 * 256, t);
-
-  const uint32_t now = millis();
-  if (now - strip.paletteLastBlendMs >= 40) {
-    strip.paletteLastBlendMs = now;
-    nblendPaletteTowardPalette(strip.currentPalette, strip.targetPalette, 16);
-  }
 
 #if defined(DEVICE_ID_ESP32_WALL)
   colorwaves(strip, hue16, pseudotime);

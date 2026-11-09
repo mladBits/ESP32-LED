@@ -39,12 +39,6 @@ static uint32_t deviceSalt() {
 void CityLights::update(Strip& strip) const {
     const uint32_t t = AnimClock::now();
 
-    const uint32_t now = millis();
-    if (now - strip.paletteLastBlendMs >= 60) {
-        strip.paletteLastBlendMs = now;
-        nblendPaletteTowardPalette(strip.currentPalette, strip.targetPalette, 16);
-    }
-
     fillUnderlayer(strip, BASE_BRI);
 
     const uint32_t salt = deviceSalt() ^ ((uint32_t)strip.id * 0x9E3779B9U);
@@ -69,9 +63,9 @@ void CityLights::update(Strip& strip) const {
         env = scale8(env, env);
         if (!env) continue;
 
-        // A new palette colour each time the light comes on (0..240: palettes
-        // are written one-way).
-        const uint8_t idx = scale8((uint8_t)(s >> 8), 240);
-        strip.leds[i] += ColorFromPalette(strip.currentPalette, idx, env, LINEARBLEND);
+        // A new palette colour each time the light comes on (never past the
+        // last entry: palettes are written one-way).
+        const uint16_t idx = scale16((uint16_t)(s >> 8), PALETTE_INDEX_MAX);
+        strip.leds[i] += paletteAt(strip.currentPalette, idx, env);
     }
 }

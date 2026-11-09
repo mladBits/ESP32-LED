@@ -1,6 +1,7 @@
 #include "Drift.h"
 #include "AnimClock.h"
 #include "AnimMath.h"
+#include "PaletteSample.h"
 
 // Shared per-frame params — computed once and read by both linear and center variants
 static uint16_t sHueInc16;
@@ -21,16 +22,14 @@ static void computeParams() {
 
 static CRGB samplePalette(const CRGBPalette16& pal, uint16_t& hue16, uint16_t& brightTheta) {
     hue16   += sHueInc16;
-    // Walk the palette there and back instead of wrapping (see foldPhase).
-    const uint8_t hue8 = foldPhase(hue16);
-
     brightTheta += sBrightThetaInc16;
     uint16_t b16  = sin16(brightTheta) + 32768;
     uint16_t bri16 = (uint32_t)b16 * b16 / 65536;
     uint8_t  bri8  = (uint32_t)bri16 * sBrightDepth / 65536;
     bri8 += (255 - sBrightDepth);  // lift floor so it stays bright
 
-    return ColorFromPalette(pal, scale8(hue8, 240), bri8);
+    // The palette there and back, never wrapping (see foldPhase16).
+    return paletteFolded(pal, hue16, bri8);
 }
 
 void Drift::driftLinear(Strip& strip, uint16_t hue16, uint16_t brightTheta) const {
@@ -71,12 +70,6 @@ void Drift::update(Strip& strip) const {
     const uint32_t t = AnimClock::now();
     const uint16_t brightTheta = beatsinIntegral16(50,  1 * 256, 2 * 256, t);
     const uint16_t hue16       = beatsinIntegral16(120, 128, 256, t);
-
-    const uint32_t now = millis();
-    if (now - strip.paletteLastBlendMs >= 40) {
-        strip.paletteLastBlendMs = now;
-        nblendPaletteTowardPalette(strip.currentPalette, strip.targetPalette, 12);
-    }
 
 #if defined(DEVICE_ID_ESP32_WALL)
     driftLinear(strip, hue16, brightTheta);

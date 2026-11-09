@@ -64,6 +64,10 @@ class MqttLight {
         uint8_t brightness = 0;          // current brightness
         uint8_t targetBrightness = 0;    // fade target
         uint8_t lastOnBrightness = 150;
+        // time-based fade toward targetBrightness (see stepBrightnessRamp)
+        static constexpr uint32_t BRIGHTNESS_STEP_MS = 5;
+        uint32_t lastRampMs = 0;
+        void stepBrightnessRamp();
         bool blackedOut = false;         // strips cleared+shown after fading to 0
 
         // one-shot power-down collapse played when toggling off

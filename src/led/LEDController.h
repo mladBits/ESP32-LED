@@ -42,6 +42,8 @@ class LEDController {
         void registerAnimation(const AnimationRegistry* ar, const char* name);
         
         // palette control
+        // How long a palette change crossfades (immediate: no fade).
+        static constexpr uint32_t PALETTE_FADE_MS = 3000;
         void updatePalette(const CRGBPalette16& palette, bool immediate = false);
 
         // direction control

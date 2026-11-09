@@ -3,19 +3,19 @@
 #include <FastLED.h>
 #include "led/Strip.h"
 #include "AnimClock.h"
-#include "AnimMath.h"
+#include "PaletteSample.h"
 
 // Ambient colour base so an animation's dark gaps still carry a hint of the
 // palette instead of pure black — a dim, slowly drifting gradient sampled from
 // the strip's current palette. Bright features are drawn on top.
 
-// drift is a 16-bit phase; the palette is walked there and back (foldPhase),
-// so the gradient never jumps from the palette's last colour to its first.
+// drift is a 16-bit phase; the palette is walked there and back
+// (paletteFolded), so the gradient never jumps from its last colour to its first.
 inline CRGB underlayerColorAt(const Strip& strip, int i, uint8_t bri, uint16_t drift) {
     int n = strip.numLeds > 0 ? strip.numLeds : 1;
     // Gentle half-palette spread: a quarter of a there-and-back cycle.
     const uint16_t phase = drift + (uint16_t)(((uint32_t)i * 16384) / n);
-    return ColorFromPalette(strip.currentPalette, scale8(foldPhase(phase), 240), bri, LINEARBLEND);
+    return paletteFolded(strip.currentPalette, phase, bri);
 }
 
 // One there-and-back cycle every 2 minutes: the palette drifts by one

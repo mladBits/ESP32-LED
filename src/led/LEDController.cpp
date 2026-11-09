@@ -4,7 +4,6 @@
 void LEDController::addStrip(CRGB* ledArray, int count) {
     if (numStrips < MAX_STRIPS) {
         strips[numStrips] = Strip(numStrips, ledArray, count);
-        strips[numStrips].paletteLastBlendMs = millis();
         numStrips++;
     }
 }
@@ -20,6 +19,11 @@ void LEDController::clear() {
 }
 
 void LEDController::applyHsv(uint8_t  h, uint8_t  s, uint8_t v) {
+    // CHSV's default conversion, hsv2rgb_rainbow, on purpose. It spaces hues for
+    // LEDs rather than screens: an LED's green looks far brighter than its red
+    // and blue, so standard HSV (hsv2rgb_fullspectrum, which matches HA's
+    // picker numerically) looked wrong on the strips - reds orange, yellow
+    // greenish, green washed out (tried and reverted in Nov 2026).
     CHSV target(h, s, v);
 
     for (int i = 0; i < numStrips; i++) {
@@ -117,10 +121,28 @@ void LEDController::powerOnReveal(uint8_t progress) {
     }
 }
 
+// Advances a palette change: an eased crossfade over PALETTE_FADE_MS, every
+// entry at once. (FastLED's nblendPaletteTowardPalette steps one channel value
+// at a time from entry 0 up, so a full change took 30-45 s, swept along the
+// palette and passed through off colours.) UI timing, so millis() is fine.
+static void stepPaletteFade(Strip& strip, uint32_t now) {
+    if (!strip.paletteFading) return;
+    const uint32_t elapsed = now - strip.paletteFadeStartMs;
+    if (elapsed >= LEDController::PALETTE_FADE_MS) {
+        strip.currentPalette = strip.targetPalette;
+        strip.paletteFading = false;
+        return;
+    }
+    const uint8_t fract = ease8InOutQuad((uint8_t)(elapsed * 256 / LEDController::PALETTE_FADE_MS));
+    blend(strip.fromPalette.entries, strip.targetPalette.entries, strip.currentPalette.entries, 16, fract);
+}
+
 void LEDController::animate() {
     // One clock reading per frame: every strip renders the same instant.
     AnimClock::beginFrame();
+    const uint32_t now = millis();
     for (int i = 0; i < numStrips; i++) {
+        stepPaletteFade(strips[i], now);
         if (strips[i].animation) {
             strips[i].animation->update(strips[i]);
         }
@@ -128,11 +150,8 @@ void LEDController::animate() {
 }
 
 void LEDController::setAnimation(const Animation* anim) {
-    const uint32_t now = millis();
-
     for (int i = 0; i < numStrips; i++) {
         strips[i].animation = anim;
-        strips[i].paletteLastBlendMs = now;
     }
 }
 
@@ -147,13 +166,18 @@ void LEDController::updatePalette(const CRGBPalette16& palette, bool immediate) 
     const uint32_t now = millis();
 
     for (int i = 0; i < numStrips; i++) {
-        strips[i].targetPalette = palette;
-
+        Strip& s = strips[i];
+        s.targetPalette = palette;
         if (immediate) {
-            strips[i].currentPalette = palette;
+            s.currentPalette = s.fromPalette = palette;
+            s.paletteFading = false;
+        } else {
+            // From what's showing now, even mid-fade, so a quick second change
+            // doesn't jump.
+            s.fromPalette = s.currentPalette;
+            s.paletteFadeStartMs = now;
+            s.paletteFading = true;
         }
-
-        strips[i].paletteLastBlendMs = now;
     }
 }
 
