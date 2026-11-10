@@ -6,6 +6,7 @@
 #include "Drift.h"
 #include "LavaLamp.h"
 #include "CityLights.h"
+#include "Aurora.h"
 
 class AnimationRegistry {
 public:
@@ -17,7 +18,7 @@ public:
     Animation* getByName(const char* name) const;
 private:
     size_t count;
-    static constexpr uint8_t capacity = 5;
+    static constexpr uint8_t capacity = 6;
     Animation* animations[capacity];
 
     ColorWave colorWave;
@@ -25,4 +26,5 @@ private:
     Drift drift;
     LavaLamp lavaLamp;
     CityLights cityLights;
+    Aurora aurora;
 };

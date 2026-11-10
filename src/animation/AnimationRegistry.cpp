@@ -1,12 +1,13 @@
 #include "AnimationRegistry.h"
 
 AnimationRegistry::AnimationRegistry() :
-colorWave(), pacifica(), drift(), lavaLamp(), cityLights(), count(0) {
+colorWave(), pacifica(), drift(), lavaLamp(), cityLights(), aurora(), count(0) {
     animations[count++] = &colorWave;
     animations[count++] = &pacifica;
     animations[count++] = &drift;
     animations[count++] = &lavaLamp;
     animations[count++] = &cityLights;
+    animations[count++] = &aurora;
 }
 
 Animation* AnimationRegistry::getByName(const char* name) const {

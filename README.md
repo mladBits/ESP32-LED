@@ -184,6 +184,7 @@ On every connect the board publishes, retained, `{ "unique_id": "esp32_led_6", "
 - `Drift` — slow, soft ribbons of palette color that never go dark.
 - `LavaLamp` — slow noise blobs that morph and drift, like a lava lamp.
 - `CityLights` — lights fading on and off at random over a dim glow, like a skyline at night.
+- `Aurora` — a few broad, soft curtains of palette color that wander, breathe and fade over a dim glow.
 
 All effects are driven by a shared clock synced over NTP, so the same effect on several boards moves in step (see [Notes](#notes)).
 

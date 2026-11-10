@@ -37,3 +37,16 @@ static inline uint16_t foldPhase16(uint16_t phase) {
     const uint16_t f = (uint16_t)(phase << 1);
     return (phase & 0x8000) ? (uint16_t)~f : f;
 }
+
+// A soft-edged bump: 65535 at dist 0, easing down to 0 at dist == width and
+// beyond (smoothstep, so it is flat at the peak and lands on 0 without a
+// corner). dist and width share any unit; a width of 0 gives 0. Never rises as
+// dist grows.
+static inline uint16_t smoothBump16(uint32_t dist, uint32_t width) {
+    if (dist >= width) return 0;
+    // x = 1 - dist/width in Q16 (0 < x <= 65536), then x^2 * (3 - 2x).
+    const uint32_t x  = (uint32_t)(((uint64_t)(width - dist) << 16) / width);
+    const uint64_t x2 = (uint64_t)x * x;                             // Q32
+    const uint64_t v  = (x2 * (3u * 65536u - 2u * x)) >> 32;         // Q16, <= 65536
+    return v > 65535 ? 65535 : (uint16_t)v;
+}

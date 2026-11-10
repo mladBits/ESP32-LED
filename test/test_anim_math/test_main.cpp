@@ -79,8 +79,38 @@ void continuousAtClockWrap() {
     TEST_ASSERT_LESS_OR_EQUAL_INT(61, step);
 }
 
+// smoothBump16 peaks at dist 0, is half-way at half the width and is 0 from the
+// width outwards (and for a width of 0).
+void smoothBump16_peakMidpointAndEdge() {
+    TEST_ASSERT_EQUAL_UINT16(65535, smoothBump16(0, 1000));
+    TEST_ASSERT_EQUAL_UINT16(32768, smoothBump16(500, 1000));
+    TEST_ASSERT_EQUAL_UINT16(0,     smoothBump16(1000, 1000));
+    TEST_ASSERT_EQUAL_UINT16(0,     smoothBump16(5000, 1000));
+    TEST_ASSERT_EQUAL_UINT16(0,     smoothBump16(0, 0));
+    TEST_ASSERT_EQUAL_UINT16(0,     smoothBump16(7, 0));
+    // Widths far beyond a strip's (in 1/256 LED) don't overflow.
+    TEST_ASSERT_EQUAL_UINT16(65535, smoothBump16(0, 0xFFFFFFFFu));
+    TEST_ASSERT_EQUAL_UINT16(0,     smoothBump16(0xFFFFFFFFu, 0xFFFFFFFFu));
+}
+
+// It only ever falls as dist grows, and gently: no step bigger than the
+// smoothstep's steepest slope (1.5 / width) allows.
+void smoothBump16_fallsSmoothly() {
+    const uint32_t width = 4000;   // ~15 LEDs in 1/256 LED units
+    uint16_t prev = smoothBump16(0, width);
+    for (uint32_t d = 1; d <= width + 10; d++) {
+        const uint16_t v = smoothBump16(d, width);
+        TEST_ASSERT_LESS_OR_EQUAL_UINT16(prev, v);
+        TEST_ASSERT_LESS_OR_EQUAL_INT(26, prev - v);   // 1.5 * 65536 / 4000 = 24.6
+        prev = v;
+    }
+    TEST_ASSERT_EQUAL_UINT16(0, prev);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
+    RUN_TEST(smoothBump16_peakMidpointAndEdge);
+    RUN_TEST(smoothBump16_fallsSmoothly);
     RUN_TEST(colorWavePhase_tracksAccumulator);
     RUN_TEST(driftHue_tracksAccumulator);
     RUN_TEST(foldPhase16_isASeamlessTriangle);
